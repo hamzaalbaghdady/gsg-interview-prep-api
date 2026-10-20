@@ -1,58 +1,312 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# AI-Powered Niche Interview Prep Platform — API
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Laravel-based backend for an AI-powered technical interview preparation platform. The system connects a React frontend with a Python AI service to manage interview sessions, questions, answers, evaluations, and reports.
 
-## About Laravel
+## Tech Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Backend:** Laravel 13, PHP 8.4
+- **Database:** MySQL 8.0
+- **Web server:** Nginx
+- **Infrastructure:** Docker Compose
+- **Database management:** phpMyAdmin
+- **Authentication:** Laravel Sanctum (planned/configured as development progresses)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Prerequisites
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Install the following before starting:
 
-## Learning Laravel
+- [Git](https://git-scm.com/downloads)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) with the Linux container engine enabled
+- [Visual Studio Code](https://code.visualstudio.com/) or your preferred editor
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+You do not need to install PHP, Composer, or MySQL directly on your machine. These dependencies run inside Docker.
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Getting Started
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+### 1. Clone the repository
 
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Open a terminal and run:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+git clone https://github.com/hamzaalbaghdady/gsg-interview-prep-api.git
+cd gsg-interview-prep-api
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### 2. Configure environment variables
 
-## Contributing
+Create your local environment file from the example:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+**Windows PowerShell:**
 
-## Code of Conduct
+```powershell
+Copy-Item .env.example .env
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+**Linux/macOS:**
 
-## Security Vulnerabilities
+```bash
+cp .env.example .env
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Open `.env` and configure the following values for local development:
+
+```dotenv
+APP_NAME="Interview Prep API"
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=mysql
+DB_HOST=db
+DB_PORT=3306
+DB_DATABASE=interview_prep
+DB_USERNAME=laravel
+DB_PASSWORD=secret
+```
+
+Keep the existing entries in `.env` unless there is a specific reason to change them.
+
+**Important:** These database credentials are for local development only. Never use them in production.
+
+### 3. Build and start the containers
+
+Make sure Docker Desktop is running, then execute:
+
+```bash
+docker compose up -d --build
+```
+
+The first startup may take several minutes while Docker downloads images and installs PHP dependencies.
+
+The environment includes four services:
+
+| Service      | Purpose                | Access                  |
+| ------------ | ---------------------- | ----------------------- |
+| `app`        | PHP-FPM and Laravel    | Internal Docker network |
+| `web`        | Nginx web server       | http://localhost:8000   |
+| `db`         | MySQL database         | localhost:3307          |
+| `phpmyadmin` | Database management UI | http://localhost:8080   |
+
+Inside Docker, Laravel connects to MySQL using hostname `db` and port `3306`. Port `3307` is only for connections from your host machine.
+
+### 4. Generate the application key
+
+Run:
+
+```bash
+docker compose exec app php artisan key:generate
+```
+
+This generates a unique encryption key in your local `.env` file. Do not share or commit that file.
+
+### 5. Run database migrations
+
+Initialize the database schema:
+
+```bash
+docker compose exec app php artisan migrate
+```
+
+### 6. Verify the installation
+
+Open the following URLs:
+
+- **Laravel application:** http://localhost:8000
+- **phpMyAdmin:** http://localhost:8080
+
+For local phpMyAdmin access, use:
+
+- Server: `db`
+- Username: `laravel`
+- Password: `secret`
+
+If the Laravel page does not load, check the troubleshooting section below.
+
+## Docker Commands
+
+Run these commands from the repository root.
+
+### Start the environment
+
+```bash
+docker compose up -d
+```
+
+### Stop the containers
+
+```bash
+docker compose down
+```
+
+This stops and removes the containers but preserves the named database and vendor volumes.
+
+### View running services
+
+```bash
+docker compose ps
+```
+
+### View application logs
+
+```bash
+docker compose logs -f app
+```
+
+### View Nginx logs
+
+```bash
+docker compose logs -f web
+```
+
+### Open a shell inside the Laravel container
+
+```bash
+docker compose exec app sh
+```
+
+### Run Artisan commands
+
+For example:
+
+```bash
+docker compose exec app php artisan about
+docker compose exec app php artisan migrate:status
+```
+
+### Install updated Composer dependencies
+
+After changing `composer.json` or `composer.lock`, run:
+
+```bash
+docker compose exec app composer install
+```
+
+Commit dependency changes and the updated `composer.lock` file, but never commit the `.env` file.
+
+## Development Workflow
+
+**Do not work directly on `main`.** Create a separate branch for each feature or fix.
+
+### 1. Get the latest changes
+
+```bash
+git switch main
+git pull origin main
+```
+
+### 2. Create a feature branch
+
+Use a descriptive name:
+
+```bash
+git switch -c feature/resume-upload
+```
+
+Other examples:
+
+- `feature/interview-sessions`
+- `feature/interview-evaluation`
+- `fix/authentication-error`
+- `refactor/interview-service`
+
+### 3. Commit your changes
+
+```bash
+git add .
+git commit -m "Add resume upload endpoint"
+```
+
+Stage only the files relevant to your change whenever possible.
+
+### 4. Push your branch
+
+```bash
+git push -u origin feature/resume-upload
+```
+
+Replace the example branch name with your actual branch name.
+
+### 5. Open a pull request
+
+Open GitHub and create a pull request from your feature branch into `main`.
+
+Describe what changed, explain how you tested it, and address review feedback before merging. Follow the repository's branch protection rules.
+
+## Environment and Security
+
+- Never commit `.env`, credentials, API keys, tokens, or private certificates.
+- `.env.example` should contain only safe example values and no real secrets.
+- Keep `composer.lock` under version control to maintain consistent PHP dependencies.
+- Do not use the local Docker database credentials in production.
+- Do not run `docker compose down -v` unless you intentionally want to delete the named database and vendor volumes. Removing the database volume deletes the local database data.
+- Configure production secrets, debug settings, database access, and deployment separately.
+
+## Troubleshooting
+
+### Docker is not responding
+
+Make sure Docker Desktop is running, then check:
+
+```bash
+docker version
+docker compose ps
+```
+
+### Laravel cannot connect to MySQL
+
+Check that the database is healthy:
+
+```bash
+docker compose ps
+docker compose logs --tail=100 db
+```
+
+Verify that `.env` uses `DB_HOST=db` and that the database name and credentials match the Docker Compose configuration.
+
+### The website is unavailable
+
+Check the application and Nginx logs:
+
+```bash
+docker compose logs --tail=100 app
+docker compose logs --tail=100 web
+```
+
+### Dependencies or containers need rebuilding
+
+```bash
+docker compose up -d --build
+```
+
+If a problem persists, inspect the logs before deleting containers or volumes.
+
+## Project Structure
+
+```text
+gsg-interview-prep-api/
+├── app/                 # Application logic
+├── bootstrap/           # Application bootstrap
+├── config/              # Laravel configuration
+├── database/
+│   ├── migrations/      # Database schema migrations
+│   ├── factories/
+│   └── seeders/
+├── docker/
+│   ├── Dockerfile       # PHP-FPM image
+│   ├── nginx.conf       # Nginx configuration
+│   └── php.ini          # PHP configuration
+├── public/              # Web entry point
+├── routes/              # API and web routes
+├── tests/               # Automated tests
+├── .env.example         # Environment template
+├── compose.yaml         # Docker services
+├── composer.json        # PHP dependencies
+└── README.md            # Project documentation
+```
+
+This structure may evolve as development progresses.
 
 ## License
 
+The project's license will be specified when one is selected.
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
