@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\JobDescriptionController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\ResumeController;
 use Illuminate\Http\Request;
@@ -24,8 +25,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [UserController::class, 'show']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
+  // Resumes routes
     Route::get('/resumes', [ResumeController::class, 'index'])->name('resumes.index');
     Route::post('/resumes', [ResumeController::class, 'store'])->name('resumes.store');
     Route::get('/resumes/{resume}', [ResumeController::class, 'show'])
         ->whereNumber('resume')->name('resumes.show');
+    
+  // Job_description routes
+    Route::name('api.v1.job-descriptions.')->prefix('job-descriptions')
+        ->controller(JobDescriptionController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{job_description}', 'show')->name('show');
+        });
 });
