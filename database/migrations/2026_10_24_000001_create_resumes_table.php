@@ -14,8 +14,8 @@ return new class extends Migration
             $table->string('title', 45);
             $table->string('file_path', 100);
             $table->char('file_hash', 64);
-            $table->text('extracted_text')->nullable();
-            $table->string('parsing_status', 45)->default('pending');
+            $table->mediumText('extracted_text')->nullable();
+            $table->enum('parsing_status', ['pending','processing','completed','failed',])->default('pending');
             $table->timestamps();
 
             $table->unique(['user_id', 'file_hash']);

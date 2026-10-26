@@ -57,7 +57,7 @@ class PythonResumeService
         }
 
         $validator = Validator::make($payload, [
-            'extracted_text' => ['required', 'string', 'max:65535'],
+            'extracted_text' => ['required', 'string', 'max:16777215'],
             'skills' => ['present', 'array', 'list', 'max:500'],
             'skills.*' => ['required', 'array:name,category,confidence_score'],
             'skills.*.name' => ['required', 'string', 'max:45'],
@@ -66,7 +66,7 @@ class PythonResumeService
         ]);
 
         if ($validator->fails() || trim($payload['extracted_text'] ?? '') === ''
-            || strlen($payload['extracted_text']) > 65535) {
+            || strlen($payload['extracted_text']) > 16777215) {
             throw new RuntimeException('Resume processing service returned an invalid result.');
         }
 

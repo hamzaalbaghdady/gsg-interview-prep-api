@@ -28,18 +28,32 @@ class ProcessResume implements ShouldQueue
 
     public function handle(PythonResumeService $service): void
     {
-        $resume = Resume::query()->find($this->resumeId);
+        $resume = Resume::query()
+            ->select(['id', 'parsing_status', 'file_path'])
+            ->find($this->resumeId);
 
         if ($resume === null || $resume->parsing_status === Resume::COMPLETED) {
             return;
         }
 
-        $resume->update(['parsing_status' => Resume::PROCESSING]);
+        // Atomically mark as processing only if another job has not already completed it.
+        $updated = Resume::query()
+            ->whereKey($this->resumeId)
+            ->where('parsing_status', '!=', Resume::COMPLETED)
+            ->update([
+                'parsing_status' => Resume::PROCESSING,
+            ]);
+
+        if ($updated === 0) {
+            return;
+        }
 
         $result = $service->extract($resume);
 
         DB::transaction(function () use ($result) {
-            $resume = Resume::query()->lockForUpdate()->findOrFail($this->resumeId);
+            $resume = Resume::query()
+                ->select(['id', 'parsing_status'])
+                ->lockForUpdate()->findOrFail($this->resumeId);
 
             if ($resume->parsing_status === Resume::COMPLETED) {
                 return;
@@ -58,8 +72,10 @@ class ProcessResume implements ShouldQueue
                     : round((float) $item['confidence_score'], 2);
 
                 // Repeated skills in an AI response produce one pivot row.
-                if (! array_key_exists($skill->id, $links)
-                    || ($score !== null && $score > ($links[$skill->id]['confidence_score'] ?? -1))) {
+                if (
+                    ! array_key_exists($skill->id, $links)
+                    || ($score !== null && $score > ($links[$skill->id]['confidence_score'] ?? -1))
+                ) {
                     $links[$skill->id] = ['confidence_score' => $score];
                 }
             }

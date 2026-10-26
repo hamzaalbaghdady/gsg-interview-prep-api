@@ -16,7 +16,9 @@ class ResumeController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         return ResumeResource::collection(
-            $request->user()->resumes()->latest('id')->paginate(15)
+            $request->user()->resumes()
+            ->select(['id','title','parsing_status','created_at','updated_at'])
+            ->latest('id')->paginate(15)
         );
     }
 
