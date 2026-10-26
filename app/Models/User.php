@@ -33,6 +33,10 @@ class User extends Authenticatable
         ];
     }
 
+    public function resumes(): HasMany
+    {
+        return $this->hasMany(Resume::class);
+    
     // jobDescriptions relationship
     public function jobDescriptions(): HasMany
     {
