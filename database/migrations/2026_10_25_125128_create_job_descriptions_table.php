@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('title', 150)->index();
             $table->string('company_name', 150)->nullable();
             $table->mediumText('description')->nullable(); // max ~16.7 Million characters
+            $table->enum('parsing_status', ['pending', 'processing', 'completed', 'failed',])->default('pending');
             $table->timestamps();
         });
     }

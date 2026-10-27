@@ -16,4 +16,11 @@ class Skill extends Model
         return $this->belongsToMany(Resume::class, 'resume_skills')
             ->withPivot('confidence_score');
     }
+
+    public function jobDescriptions(): BelongsToMany
+    {
+        return $this->belongsToMany(JobDescription::class, 'job_descriptions_skills')
+            ->withPivot('importance')
+            ->withCasts(['importance' => 'float']);
+    }
 }
