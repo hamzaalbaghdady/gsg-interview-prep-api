@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreJobDescriptionRequest;
+use App\Http\Resources\Api\V1\JobDescriptionResource;
+use App\Jobs\ProcessJobDescription;
 use App\Models\JobDescription;
 use Illuminate\Http\Request;
 
@@ -18,14 +20,11 @@ class JobDescriptionController extends Controller
         // Return latest 15 job description without the description part.
         $data = $request->user()
             ->jobDescriptions()
-            ->select(['id', 'user_id', 'title', 'company_name', 'created_at'])
+            ->select(['id', 'user_id', 'title', 'company_name', 'parsing_status', 'created_at'])
             ->latest()
             ->paginate($request->query('per_page', 15));
 
-        return response()->json([
-            'status' => 'success',
-            'data' => $data
-        ]);
+        return JobDescriptionResource::collection($data);
     }
 
 
@@ -41,11 +40,14 @@ class JobDescriptionController extends Controller
         $user = $request->user();
         $jobDescription = $user->jobDescriptions()->create($validated);
 
+        // Dispatch background processing job safely after the DB commits the record
+        ProcessJobDescription::dispatch($jobDescription->id)->afterCommit();
+
         // Return response
         return response()->json([
             'status' => 'success',
-            'message' => 'Job Description created successfully.',
-            'data' => $jobDescription
+            'message' => 'Job Description created successfully and queued for AI skill extraction.',
+            'data' => new JobDescriptionResource($jobDescription->refresh())
         ], 201);
     }
 
@@ -61,10 +63,12 @@ class JobDescriptionController extends Controller
                 'message' => 'Resource not found.' // 404 is better for security here
             ], 404);
         }
+        // EAGER LOAD
+        $jobDescription->load('skills');
 
         return response()->json([
             'status' => 'success',
-            'data' => $jobDescription
+            'data' => new JobDescriptionResource($jobDescription)
         ]);
     }
 }
