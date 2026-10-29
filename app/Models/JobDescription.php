@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['title', 'company_name', 'description',])]
+#[Fillable(['title', 'company_name', 'description', 'parsing_status'])]
 class JobDescription extends Model
 {
 

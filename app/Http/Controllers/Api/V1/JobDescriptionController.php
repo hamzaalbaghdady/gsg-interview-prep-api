@@ -47,7 +47,7 @@ class JobDescriptionController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Job Description created successfully and queued for AI skill extraction.',
-            'data' => new JobDescriptionResource($jobDescription)
+            'data' => new JobDescriptionResource($jobDescription->refresh())
         ], 201);
     }
 
