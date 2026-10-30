@@ -37,5 +37,6 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/', 'index')->name('index');
             Route::post('/', 'store')->name('store');
             Route::get('/{job_description}', 'show')->name('show');
+            Route::get('/{job_description}/gap-analysis/{resume_id}', 'gapAnalysis')->name('gap-analysis');
         });
 });
