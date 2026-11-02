@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['user_id', 'title', 'file_path', 'file_hash', 'extracted_text', 'parsing_status'])]
 #[Hidden(['file_path', 'file_hash'])]
@@ -29,5 +30,10 @@ class Resume extends Model
     {
         return $this->belongsToMany(Skill::class, 'resume_skills')
             ->withPivot('confidence_score');
+    }
+
+    public function gapAnalyses(): HasMany
+    {
+        return $this->hasMany(GapAnalysis::class);
     }
 }
