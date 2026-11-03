@@ -7,7 +7,7 @@ use App\Models\JobDescription;
 use App\Models\GapAnalysis;
 use App\Enums\ParsingStatus;
 use App\Services\SkillGapAnalysisService;
-use App\Jobs\GenerateSkillRoadmap; // Todo
+use App\Jobs\GenerateSkillRoadmap;
 use Illuminate\Http\Request;
 
 class GapAnalysisController extends Controller
@@ -38,49 +38,39 @@ class GapAnalysisController extends Controller
             ], 422);
         }
 
-        // If Gap analysis already exists
-        $existingAnalysis = GapAnalysis::query()
-            ->where('job_description_id', $jobDescription->id)
-            ->where('resume_id', $resume->id)
-            ->first();
+        // Find or compute the gap analysis
+        $analysis = GapAnalysis::query()->firstOrCreate(
+            [
+                'resume_id' => $resume->id,
+                'job_description_id' => $jobDescription->id,
+            ],
+            function () use ($jobDescription, $resume, $analysisService) {
+                // Calculate the gapAnalysis if not
+                $jobDescription->load('skills');
+                $analysisResult = $analysisService->calculate($jobDescription, $resume);
 
-        if ($existingAnalysis !== null) {
-            return response()->json([
-                'status' => 'success',
-                'source' => 'database_cache',
-                'data' => array_merge([
-                    'job_title' => $jobDescription->title,
-                    'resume_title' => $resume->title,
-                ], $existingAnalysis->toArray())
-            ]);
+                return [
+                    'match_percentage' => $analysisResult['match_percentage'],
+                    'analysis' => $analysisResult, // Array auto-serialized to JSON
+                    'roadmap_status' => ParsingStatus::PENDING,
+                    'roadmap' => null
+                ];
+            }
+        );
+
+        // Dispatch the roadmap job
+        if ($analysis->wasRecentlyCreated) {
+            GenerateSkillRoadmap::dispatch($analysis->id)->afterCommit();
         }
 
-        // Eager load relationship data
-        $jobDescription->load('skills');
-
-        // Execute calculations
-        $analysisResult = $analysisService->calculate($jobDescription, $resume);
-
-
-        // Store data
-        $newAnalysis = GapAnalysis::query()->create([
-            'resume_id' => $resume->id,
-            'job_description_id' => $jobDescription->id,
-            'match_percentage' => $analysisResult['match_percentage'],
-            'analysis' => $analysisResult, // Array auto-serialized to JSON by Eloquent AsArrayObject cast
-            'roadmap_status' => ParsingStatus::PENDING,
-            'roadmap' => null
-        ]);
-
-        // 7. ASYNC AI ROADMAP: Dispatch the background job safely after database write commits
-        GenerateSkillRoadmap::dispatch($newAnalysis->id)->afterCommit();
-
+        // Return unified response structure
         return response()->json([
             'status' => 'success',
+            'source' => $analysis->wasRecentlyCreated ? 'calculated' : 'database_cache',
             'data' => array_merge([
                 'job_title' => $jobDescription->title,
                 'resume_title' => $resume->title,
-            ], $analysisResult)
-        ], 201);
+            ], $analysis->toArray())
+        ], $analysis->wasRecentlyCreated ? 201 : 200);
     }
 }
