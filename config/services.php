@@ -37,8 +37,10 @@ return [
 
     // AI service configuration
     'python_ai' => [
-        'job_url' => env('JOB_PYTHON_URL') ?: 'http://localhost:8000/api/v1/extract-job',
-        'token' => env('JOB_PYTHON_TOKEN') ?: null,
+        'job_url' => env('JOB_PYTHON_URL'),
+        'roadmap_url' => env('ROADMAP_PYTHON_URL'),
+        'token' => env('JOB_PYTHON_TOKEN'),
+
         'connect_timeout' => 5,
         'timeout' => 30,
     ],

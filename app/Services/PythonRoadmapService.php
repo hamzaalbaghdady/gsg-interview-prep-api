@@ -11,7 +11,7 @@ class PythonRoadmapService
 {
     public function generate(GapAnalysis $analysis): array
     {
-        $url = config('services.python_ai.roadmap_url', 'http://localhost:8000/api/v1/generate-roadmap');
+        $url = config('services.python_ai.roadmap_url');
 
         $request = Http::acceptJson()
             ->connectTimeout(5)
@@ -23,8 +23,9 @@ class PythonRoadmapService
 
         // Post the calculated missing skills analysis dictionary directly to Python
         $response = $request->post($url, [
-            'match_percentage' => $analysis->match_percentage,
+            'job_title' => $analysis->jobDescription->title,
             'missing_skills' => $analysis->analysis['missing_skills'] ?? [],
+            'matching_skills' => $analysis->analysis['matching_skills'] ?? [],
         ]);
 
         if (!$response->successful()) {
