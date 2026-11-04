@@ -29,7 +29,13 @@ class GenerateSkillRoadmap implements ShouldQueue
     {
         // get analysis
         $analysis = GapAnalysis::query()
-            ->select(['id', 'roadmap_status', 'match_percentage', 'analysis'])
+            ->with('jobDescription:id,title')
+            ->select([
+                'id',
+                'job_description_id',
+                'roadmap_status',
+                'analysis',
+            ])
             ->findOrFail($this->gapAnalysisId);
 
         // check if roadmap is completed

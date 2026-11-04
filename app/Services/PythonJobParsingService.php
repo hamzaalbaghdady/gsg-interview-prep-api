@@ -33,7 +33,7 @@ class PythonJobParsingService
 
         // Send raw text payload to the custom extraction endpoint
         $response = $request->post($url, [
-            'description' => $job->description,
+            'text' => $job->description,
         ]);
 
         // Throw exception if request not successful
