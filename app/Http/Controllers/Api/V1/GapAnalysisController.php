@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Controller;
-use App\Models\JobDescription;
-use App\Models\GapAnalysis;
 use App\Enums\ParsingStatus;
-use App\Services\SkillGapAnalysisService;
+use App\Http\Controllers\Controller;
 use App\Jobs\GenerateSkillRoadmap;
+use App\Models\GapAnalysis;
+use App\Models\JobDescription;
+use App\Services\SkillGapAnalysisService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class GapAnalysisController extends Controller
 {
@@ -60,7 +62,15 @@ class GapAnalysisController extends Controller
 
         // Dispatch the roadmap job
         if ($analysis->wasRecentlyCreated) {
-            GenerateSkillRoadmap::dispatch($analysis->id)->afterCommit();
+            try {
+                GenerateSkillRoadmap::dispatch($analysis->id)->afterCommit();
+            } catch (Throwable $exception) {
+                GapAnalysis::query()
+                    ->whereKey($analysis->id)
+                    ->update([
+                        'roadmap_status' => ParsingStatus::FAILED->value,
+                    ]);
+            }
         }
 
         // Return unified response structure
