@@ -9,6 +9,7 @@ use App\Jobs\ProcessJobDescription;
 use App\Models\JobDescription;
 use Illuminate\Http\Request;
 
+
 class JobDescriptionController extends Controller
 {
 

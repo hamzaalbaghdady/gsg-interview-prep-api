@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\GapAnalysisController;
 use App\Http\Controllers\Api\V1\JobDescriptionController;
 use App\Http\Controllers\Api\V1\ResumeController;
 use App\Http\Controllers\Api\V1\UserController;
-use Illuminate\Http\Request;
+use App\Jobs\GenerateSkillRoadmap;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 // Health Check
@@ -38,4 +40,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/', 'store')->name('store');
             Route::get('/{job_description}', 'show')->name('show');
         });
+    // GapAnalysis
+    Route::get(
+        'job-descriptions/{job_description}/gap-analysis/{resume_id}',
+        [GapAnalysisController::class, 'gapAnalysis']
+    )->name('api.v1.gap-analysis');
 });
