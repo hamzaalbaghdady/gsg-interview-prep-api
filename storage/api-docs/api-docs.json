@@ -1,0 +1,1380 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Sparr API Documentation",
+        "description": "API documentation for the interview preparation platform.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/",
+            "description": "Current server"
+        }
+    ],
+    "paths": {
+        "/api/v1/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Create an account",
+                "description": "Creates a user and returns a Sanctum personal access token. Use the token in Authorize to call protected endpoints.",
+                "operationId": "register",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/RegisterRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Account created.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "description": "Sanctum personal access token; this is not a JWT.",
+                                            "example": "1|example-token"
+                                        }
+                                    },
+                                    "required": [
+                                        "user",
+                                        "token"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid input, an email already in use, or a password confirmation mismatch.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/api/v1/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Log in",
+                "description": "Returns a new Sanctum personal access token for valid credentials.",
+                "operationId": "login",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LoginRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User logged in successfully."
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        },
+                                        "token": {
+                                            "type": "string",
+                                            "description": "Paste this token into Authorize without the Bearer prefix.",
+                                            "example": "2|example-token"
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "user",
+                                        "token"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Incorrect credentials.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "Failed"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Your credentials are incorrect."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid login input.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/api/v1/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Log out",
+                "description": "Revokes only the Bearer token used for this request. Other tokens remain valid. Clear the revoked token from Authorize after logging out.",
+                "operationId": "logout",
+                "responses": {
+                    "200": {
+                        "description": "Current token revoked.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Successfully logged out."
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/job-descriptions": {
+            "get": {
+                "tags": [
+                    "Job Descriptions"
+                ],
+                "summary": "List your job descriptions",
+                "description": "Returns only the authenticated user's job descriptions, newest created_at first. Description text and skills are omitted. The current list query returns updated_at as null.",
+                "operationId": "listJobDescriptions",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Records per page. Defaults to 15; the current endpoint does not enforce an upper limit.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 15
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated job descriptions.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/JobDescription"
+                                            }
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                },
+                                "example": {
+                                    "data": [
+                                        {
+                                            "id": 1,
+                                            "title": "Laravel Backend Developer",
+                                            "company_name": "Example Company",
+                                            "parsing_status": "pending",
+                                            "created_at": "2026-10-30T12:00:00.000000Z",
+                                            "updated_at": null
+                                        }
+                                    ],
+                                    "links": {
+                                        "first": "http://localhost:8000/api/v1/job-descriptions?page=1",
+                                        "last": "http://localhost:8000/api/v1/job-descriptions?page=1",
+                                        "prev": null,
+                                        "next": null
+                                    },
+                                    "meta": {
+                                        "current_page": 1,
+                                        "from": 1,
+                                        "last_page": 1,
+                                        "links": [
+                                            {
+                                                "url": null,
+                                                "label": "&laquo; Previous",
+                                                "active": false
+                                            },
+                                            {
+                                                "url": "http://localhost:8000/api/v1/job-descriptions?page=1",
+                                                "label": "1",
+                                                "active": true
+                                            },
+                                            {
+                                                "url": null,
+                                                "label": "Next &raquo;",
+                                                "active": false
+                                            }
+                                        ],
+                                        "path": "http://localhost:8000/api/v1/job-descriptions",
+                                        "per_page": 15,
+                                        "to": 1,
+                                        "total": 1
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Job Descriptions"
+                ],
+                "summary": "Create a job description",
+                "description": "Saves the job description and queues AI skill extraction. The initial state is pending; since the record is refreshed before responding, processing may already have advanced. Poll the detail endpoint until parsing_status is completed or failed. Extraction requires a queue worker and the configured Python service. The creation response omits description and skills.",
+                "operationId": "createJobDescription",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/JobDescriptionRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "Job description created and extraction queued.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Job Description created successfully and queued for AI skill extraction."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/JobDescription"
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "message",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid title, company name, or description.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                },
+                                "example": {
+                                    "message": "The title field is required.",
+                                    "errors": {
+                                        "title": [
+                                            "The title field is required."
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/job-descriptions/{job_description}": {
+            "get": {
+                "tags": [
+                    "Job Descriptions"
+                ],
+                "summary": "Get a job description and its extracted skills",
+                "description": "Returns a job description owned by the authenticated user, including description and skills. Use this endpoint to poll extraction status. A failed extraction is represented by parsing_status=failed in an HTTP 200 response; no processing_error field is returned.",
+                "operationId": "getJobDescription",
+                "parameters": [
+                    {
+                        "name": "job_description",
+                        "in": "path",
+                        "description": "Job description ID.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Job description details.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/JobDescriptionDetail"
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                },
+                                "example": {
+                                    "status": "success",
+                                    "data": {
+                                        "id": 1,
+                                        "title": "Laravel Backend Developer",
+                                        "company_name": "Example Company",
+                                        "parsing_status": "completed",
+                                        "description": "We are looking for a backend developer experienced in Laravel, PHP, MySQL, and REST APIs.",
+                                        "skills": [
+                                            {
+                                                "id": 1,
+                                                "name": "laravel",
+                                                "category": "technical",
+                                                "importance": 0.95
+                                            }
+                                        ],
+                                        "created_at": "2026-10-30T12:00:00.000000Z",
+                                        "updated_at": "2026-10-30T12:01:00.000000Z"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The record does not exist or belongs to another user. The response shape differs between these cases.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Resource not found."
+                                        },
+                                        "status": {
+                                            "type": "string",
+                                            "description": "Only present for an existing record owned by another user.",
+                                            "example": "error"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                },
+                                "examples": {
+                                    "notOwned": {
+                                        "summary": "Record belongs to another user",
+                                        "value": {
+                                            "status": "error",
+                                            "message": "Resource not found."
+                                        }
+                                    },
+                                    "missing": {
+                                        "summary": "Record does not exist (example ID 999)",
+                                        "value": {
+                                            "message": "No query results for model [App\\Models\\JobDescription] 999"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/resumes": {
+            "get": {
+                "tags": [
+                    "Resumes"
+                ],
+                "summary": "List your resumes",
+                "description": "Returns only the authenticated user's resumes, newest ID first, with 15 records per page. Extracted text and skills are not included.",
+                "operationId": "listResumes",
+                "parameters": [
+                    {
+                        "name": "page",
+                        "in": "query",
+                        "description": "Page number.",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "default": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated resumes.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Resume"
+                                            }
+                                        },
+                                        "links": {
+                                            "$ref": "#/components/schemas/PaginationLinks"
+                                        },
+                                        "meta": {
+                                            "$ref": "#/components/schemas/PaginationMeta"
+                                        }
+                                    },
+                                    "required": [
+                                        "data",
+                                        "links",
+                                        "meta"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Resumes"
+                ],
+                "summary": "Upload a resume",
+                "description": "Upload a PDF or TXT file up to 5120 KB (5 MiB). File contents are deduplicated per user; uploading identical contents reuses the existing record without changing its title or restarting processing. New files are processed in the background. Poll GET /api/v1/resumes/{resume} until parsing_status is completed or failed. Processing requires a queue worker and a configured Python service. The upload response omits extracted_text and skills.",
+                "operationId": "uploadResume",
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ResumeUploadRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "202": {
+                        "description": "New resume uploaded and queued for processing. reused is false and the initial parsing_status is pending. A queue worker changes it to processing when analysis starts; poll the detail endpoint for updates. message: \"Resume uploaded and queued for processing.\"",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResumeUploadResponse"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Identical contents already exist for this user. reused is true; data contains the existing resume in its current state. message: \"This resume already exists. The existing resume is reused.\"",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResumeUploadResponse"
+                                },
+                                "example": {
+                                    "message": "This resume already exists. The existing resume is reused.",
+                                    "reused": true,
+                                    "data": {
+                                        "id": 1,
+                                        "title": "Backend Developer CV",
+                                        "parsing_status": "completed",
+                                        "processing_error": null,
+                                        "created_at": "2026-10-30T12:00:00.000000Z",
+                                        "updated_at": "2026-10-30T12:01:00.000000Z"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "New resume saved, but background processing could not be started. reused is false and parsing_status is failed.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ResumeUploadResponse"
+                                },
+                                "example": {
+                                    "message": "Resume uploaded, but processing could not be started.",
+                                    "reused": false,
+                                    "data": {
+                                        "id": 1,
+                                        "title": "Backend Developer CV",
+                                        "parsing_status": "failed",
+                                        "processing_error": "Resume processing failed. Please try again later.",
+                                        "created_at": "2026-10-30T12:00:00.000000Z",
+                                        "updated_at": "2026-10-30T12:00:00.000000Z"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Missing or invalid file, file larger than 5120 KB, or invalid title.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                },
+                                "example": {
+                                    "message": "The file field is required.",
+                                    "errors": {
+                                        "file": [
+                                            "The file field is required."
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/resumes/{resume}": {
+            "get": {
+                "tags": [
+                    "Resumes"
+                ],
+                "summary": "Get a resume and its extracted skills",
+                "description": "Returns a resume owned by the authenticated user, including extracted_text and skills. Use this endpoint to poll processing status. A failed processing job is represented by parsing_status=failed in a successful HTTP 200 response.",
+                "operationId": "getResume",
+                "parameters": [
+                    {
+                        "name": "resume",
+                        "in": "path",
+                        "description": "Resume ID.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 1
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Resume details.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ResumeDetail"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                },
+                                "example": {
+                                    "data": {
+                                        "id": 1,
+                                        "title": "Backend Developer CV",
+                                        "parsing_status": "completed",
+                                        "processing_error": null,
+                                        "created_at": "2026-10-30T12:00:00.000000Z",
+                                        "updated_at": "2026-10-30T12:01:00.000000Z",
+                                        "extracted_text": "Backend developer experienced in Laravel and MySQL.",
+                                        "skills": [
+                                            {
+                                                "id": 1,
+                                                "name": "Laravel",
+                                                "category": "technical",
+                                                "confidence_score": 0.95
+                                            }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Resume does not exist or belongs to another user. Non-numeric IDs do not match the route.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "description": "Example for a missing numeric ID. Wording may vary with route matching and debug settings.",
+                                            "example": "No query results for model [App\\Models\\Resume] 999"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/me": {
+            "get": {
+                "tags": [
+                    "User"
+                ],
+                "summary": "Get the authenticated user",
+                "operationId": "getCurrentUser",
+                "responses": {
+                    "200": {
+                        "description": "Authenticated user details.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "success"
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "JobDescriptionDetail": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/JobDescription"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "description": {
+                                "type": "string",
+                                "nullable": true,
+                                "example": "We are looking for a backend developer experienced in Laravel, PHP, MySQL, and REST APIs."
+                            },
+                            "skills": {
+                                "type": "array",
+                                "description": "Extracted skills. May be empty before processing completes.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer",
+                                            "example": 1
+                                        },
+                                        "name": {
+                                            "type": "string",
+                                            "example": "laravel"
+                                        },
+                                        "category": {
+                                            "type": "string",
+                                            "example": "technical"
+                                        },
+                                        "importance": {
+                                            "type": "number",
+                                            "nullable": true,
+                                            "minimum": 0,
+                                            "maximum": 1,
+                                            "example": 0.95
+                                        }
+                                    },
+                                    "required": [
+                                        "id",
+                                        "name",
+                                        "category",
+                                        "importance"
+                                    ]
+                                }
+                            }
+                        },
+                        "required": [
+                            "description",
+                            "skills"
+                        ]
+                    }
+                ]
+            },
+            "JobDescriptionRequest": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "minLength": 2,
+                        "maxLength": 150,
+                        "example": "Laravel Backend Developer"
+                    },
+                    "company_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 150,
+                        "example": "Example Company"
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Optional in the API validation. When provided, this text is sent to the Python service for skill extraction.",
+                        "nullable": true,
+                        "example": "We are looking for a backend developer experienced in Laravel, PHP, MySQL, and REST APIs."
+                    }
+                },
+                "required": [
+                    "title"
+                ]
+            },
+            "JobDescription": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 150,
+                        "example": "Laravel Backend Developer"
+                    },
+                    "company_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "example": "Example Company"
+                    },
+                    "parsing_status": {
+                        "type": "string",
+                        "description": "pending: queued; processing: extraction started; completed: skills are available; failed: extraction ultimately failed.",
+                        "enum": [
+                            "pending",
+                            "processing",
+                            "completed",
+                            "failed"
+                        ],
+                        "example": "pending"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": "2026-10-30T12:00:00.000000Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "Currently null in list responses because the list query does not select this column.",
+                        "nullable": true,
+                        "example": "2026-10-30T12:00:00.000000Z"
+                    }
+                },
+                "required": [
+                    "id",
+                    "title",
+                    "company_name",
+                    "parsing_status",
+                    "created_at",
+                    "updated_at"
+                ]
+            },
+            "LoginRequest": {
+                "type": "object",
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "mahmoud@example.com"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "minLength": 8,
+                        "writeOnly": true,
+                        "example": "ExamplePassword123!"
+                    }
+                },
+                "required": [
+                    "email",
+                    "password"
+                ]
+            },
+            "PaginationLinks": {
+                "type": "object",
+                "properties": {
+                    "first": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "example": "http://localhost:8000/api/v1/resumes?page=1"
+                    },
+                    "last": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "example": "http://localhost:8000/api/v1/resumes?page=1"
+                    },
+                    "prev": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "example": null
+                    },
+                    "next": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "example": null
+                    }
+                },
+                "required": [
+                    "first",
+                    "last",
+                    "prev",
+                    "next"
+                ]
+            },
+            "PaginationMeta": {
+                "type": "object",
+                "properties": {
+                    "current_page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "from": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "last_page": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "links": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "url": {
+                                    "type": "string",
+                                    "format": "uri",
+                                    "nullable": true,
+                                    "example": "http://localhost:8000/api/v1/resumes?page=1"
+                                },
+                                "label": {
+                                    "type": "string",
+                                    "example": "1"
+                                },
+                                "active": {
+                                    "type": "boolean",
+                                    "example": true
+                                }
+                            },
+                            "required": [
+                                "url",
+                                "label",
+                                "active"
+                            ]
+                        }
+                    },
+                    "path": {
+                        "type": "string",
+                        "format": "uri",
+                        "example": "http://localhost:8000/api/v1/resumes"
+                    },
+                    "per_page": {
+                        "type": "integer",
+                        "example": 15
+                    },
+                    "to": {
+                        "type": "integer",
+                        "nullable": true,
+                        "example": 1
+                    },
+                    "total": {
+                        "type": "integer",
+                        "example": 1
+                    }
+                },
+                "required": [
+                    "current_page",
+                    "from",
+                    "last_page",
+                    "links",
+                    "path",
+                    "per_page",
+                    "to",
+                    "total"
+                ]
+            },
+            "RegisterRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255,
+                        "example": "Mahmoud"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "description": "Must not already be registered.",
+                        "example": "mahmoud@example.com"
+                    },
+                    "password": {
+                        "type": "string",
+                        "format": "password",
+                        "minLength": 8,
+                        "writeOnly": true,
+                        "example": "ExamplePassword123!"
+                    },
+                    "password_confirmation": {
+                        "type": "string",
+                        "format": "password",
+                        "description": "Must match password.",
+                        "writeOnly": true,
+                        "example": "ExamplePassword123!"
+                    }
+                },
+                "required": [
+                    "name",
+                    "email",
+                    "password",
+                    "password_confirmation"
+                ]
+            },
+            "ResumeDetail": {
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/Resume"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "extracted_text": {
+                                "type": "string",
+                                "description": "May be null before processing completes.",
+                                "nullable": true,
+                                "example": "Backend developer experienced in Laravel and MySQL."
+                            },
+                            "skills": {
+                                "type": "array",
+                                "description": "Extracted skills. May be empty before processing completes.",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer",
+                                            "example": 1
+                                        },
+                                        "name": {
+                                            "type": "string",
+                                            "example": "Laravel"
+                                        },
+                                        "category": {
+                                            "type": "string",
+                                            "example": "technical"
+                                        },
+                                        "confidence_score": {
+                                            "type": "number",
+                                            "nullable": true,
+                                            "example": 0.95
+                                        }
+                                    },
+                                    "required": [
+                                        "id",
+                                        "name",
+                                        "category",
+                                        "confidence_score"
+                                    ]
+                                }
+                            }
+                        },
+                        "required": [
+                            "extracted_text",
+                            "skills"
+                        ]
+                    }
+                ]
+            },
+            "Resume": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 45,
+                        "example": "Backend Developer CV"
+                    },
+                    "parsing_status": {
+                        "type": "string",
+                        "description": "pending: queued; processing: analysis has started; completed: results are available; failed: processing could not start or ultimately failed.",
+                        "enum": [
+                            "pending",
+                            "processing",
+                            "completed",
+                            "failed"
+                        ],
+                        "example": "pending"
+                    },
+                    "processing_error": {
+                        "type": "string",
+                        "description": "Null unless parsing_status is failed; then returns \"Resume processing failed. Please try again later.\"",
+                        "nullable": true,
+                        "example": null
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": "2026-10-30T12:00:00.000000Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": "2026-10-30T12:00:00.000000Z"
+                    }
+                },
+                "required": [
+                    "id",
+                    "title",
+                    "parsing_status",
+                    "processing_error",
+                    "created_at",
+                    "updated_at"
+                ]
+            },
+            "ResumeUploadRequest": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "Required PDF or TXT file, maximum 5120 KB. Both its extension and detected content type are checked."
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Optional; must be non-empty when provided. If omitted, uses the filename without its extension, truncated to 45 characters.",
+                        "maxLength": 45,
+                        "example": "Backend Developer CV"
+                    }
+                },
+                "required": [
+                    "file"
+                ]
+            },
+            "ResumeUploadResponse": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "Resume uploaded and queued for processing."
+                    },
+                    "reused": {
+                        "type": "boolean",
+                        "description": "True when identical file contents already exist for this user.",
+                        "example": false
+                    },
+                    "data": {
+                        "$ref": "#/components/schemas/Resume"
+                    }
+                },
+                "required": [
+                    "message",
+                    "reused",
+                    "data"
+                ]
+            },
+            "UnauthenticatedError": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "Unauthenticated."
+                    }
+                },
+                "required": [
+                    "message"
+                ]
+            },
+            "User": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Mahmoud"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "example": "mahmoud@example.com"
+                    },
+                    "email_verified_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "May be omitted in the registration response.",
+                        "nullable": true,
+                        "example": null
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": "2026-10-30T12:00:00.000000Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": "2026-10-30T12:00:00.000000Z"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "email",
+                    "created_at",
+                    "updated_at"
+                ]
+            },
+            "ValidationError": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "example": "The email field is required."
+                    },
+                    "errors": {
+                        "type": "object",
+                        "description": "Field names mapped to lists of validation messages. Messages depend on the submitted data.",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "example": {
+                            "email": [
+                                "The email field is required."
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "message",
+                    "errors"
+                ]
+            }
+        },
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "description": "Enter the token returned by login or registration, without the Bearer prefix.",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "tags": [
+        {
+            "name": "Authentication",
+            "description": "Authentication"
+        },
+        {
+            "name": "Job Descriptions",
+            "description": "Job Descriptions"
+        },
+        {
+            "name": "Resumes",
+            "description": "Resumes"
+        },
+        {
+            "name": "User",
+            "description": "User"
+        }
+    ]
+}
