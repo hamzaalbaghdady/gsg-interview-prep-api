@@ -50,7 +50,11 @@ class InterviewController extends Controller
             $lockedUser = User::query()->lockForUpdate()->findOrFail($user->id, ['id']);
 
             $openInterview = $lockedUser->interviews()
-                ->whereIn('status', [InterviewStatus::PREPARING->value, InterviewStatus::IN_PROGRESS->value])
+                ->whereIn('status', [
+                    InterviewStatus::PREPARING->value,
+                    InterviewStatus::READY->value,
+                    InterviewStatus::IN_PROGRESS->value,
+                ])
                 ->lockForUpdate()
                 ->first();
 
