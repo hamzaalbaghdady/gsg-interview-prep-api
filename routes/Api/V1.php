@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\GapAnalysisController;
+use App\Http\Controllers\Api\V1\InterviewController;
 use App\Http\Controllers\Api\V1\JobDescriptionController;
 use App\Http\Controllers\Api\V1\ResumeController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -45,4 +46,8 @@ Route::middleware('auth:sanctum')->group(function () {
         'job-descriptions/{job_description}/gap-analysis/{resume_id}',
         [GapAnalysisController::class, 'gapAnalysis']
     )->name('api.v1.gap-analysis');
+
+    // Interviews
+    Route::post('/interviews', [InterviewController::class, 'store'])->name('api.v1.interviews.store');
+
 });
