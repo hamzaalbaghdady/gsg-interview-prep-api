@@ -40,4 +40,9 @@ class JobDescription extends Model
     {
         return $this->hasMany(GapAnalysis::class);
     }
+
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(Interview::class);
+    }
 }

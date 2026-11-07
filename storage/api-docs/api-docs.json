@@ -206,6 +206,146 @@
                 }
             }
         },
+        "/api/v1/interviews": {
+            "post": {
+                "tags": [
+                    "Interviews"
+                ],
+                "summary": "Create an interview session",
+                "description": "Creates a ready interview session for an owned resume and job description. Both sources must be processed and contain text, and the exact pair must have a saved gap analysis.",
+                "operationId": "createInterview",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/InterviewRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Returns the open interview for the same source pair.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Interview"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Interview session created in the ready state.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Interview"
+                                        }
+                                    },
+                                    "required": [
+                                        "data"
+                                    ]
+                                },
+                                "example": {
+                                    "data": {
+                                        "id": 42,
+                                        "resume_id": 12,
+                                        "job_description_id": 34,
+                                        "status": "ready",
+                                        "total_questions": 10,
+                                        "started_at": null,
+                                        "completed_at": null
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The resume or job description was not found among the authenticated user's resources.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "No query results for model [App\\Models\\Resume] 999"
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "The user has an open interview for a different source pair.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Finish your open interview before starting another one."
+                                        },
+                                        "interview_id": {
+                                            "type": "integer",
+                                            "example": 42
+                                        }
+                                    },
+                                    "required": [
+                                        "message",
+                                        "interview_id"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid identifiers, unprocessed or empty source text, or no saved gap analysis for the pair.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                },
+                                "example": {
+                                    "message": "Run a gap analysis for this resume and job description before creating an interview.",
+                                    "errors": {
+                                        "gap_analysis": [
+                                            "Run a gap analysis for this resume and job description before creating an interview."
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/job-descriptions": {
             "get": {
                 "tags": [
@@ -818,6 +958,78 @@
     },
     "components": {
         "schemas": {
+            "InterviewRequest": {
+                "type": "object",
+                "properties": {
+                    "resume_id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 12
+                    },
+                    "job_description_id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "example": 34
+                    }
+                },
+                "required": [
+                    "resume_id",
+                    "job_description_id"
+                ]
+            },
+            "Interview": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 42
+                    },
+                    "resume_id": {
+                        "type": "integer",
+                        "example": 12
+                    },
+                    "job_description_id": {
+                        "type": "integer",
+                        "example": 34
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "ready",
+                            "in_progress",
+                            "completed",
+                            "failed"
+                        ],
+                        "example": "ready"
+                    },
+                    "total_questions": {
+                        "type": "integer",
+                        "enum": [
+                            10
+                        ],
+                        "example": 10
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "resume_id",
+                    "job_description_id",
+                    "status",
+                    "total_questions",
+                    "started_at",
+                    "completed_at"
+                ]
+            },
             "JobDescriptionDetail": {
                 "allOf": [
                     {
@@ -1363,6 +1575,10 @@
         {
             "name": "Authentication",
             "description": "Authentication"
+        },
+        {
+            "name": "Interviews",
+            "description": "Interviews"
         },
         {
             "name": "Job Descriptions",
