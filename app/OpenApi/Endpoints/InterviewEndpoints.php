@@ -12,7 +12,7 @@ final class InterviewEndpoints
         operationId: 'createInterview',
         tags: ['Interviews'],
         summary: 'Create an interview session',
-        description: 'Creates a ready interview session for an owned resume and job description. Both sources must be processed and contain text, and the exact pair must have a saved gap analysis.',
+        description: 'Creates an interview session in the preparing state for an owned resume and job description. Both sources must be processed and contain text, and the exact pair must have a saved gap analysis.',
         requestBody: new OA\RequestBody(required: true, content: new OA\MediaType\Json(ref: '#/components/schemas/InterviewRequest')),
         responses: [
             new OA\Response(
@@ -26,7 +26,7 @@ final class InterviewEndpoints
             ),
             new OA\Response(
                 response: 201,
-                description: 'Interview session created in the ready state.',
+                description: 'Interview session created in the preparing state.',
                 content: new OA\MediaType\Json(
                     type: 'object',
                     required: ['data'],
@@ -35,8 +35,8 @@ final class InterviewEndpoints
                         'id' => 42,
                         'resume_id' => 12,
                         'job_description_id' => 34,
-                        'status' => 'ready',
-                        'total_questions' => Interview::TOTAL_QUESTIONS,
+                        'status' => 'preparing',
+                        'total_questions' => Interview::INITIAL_QUESTION_COUNT,
                         'started_at' => null,
                         'completed_at' => null,
                     ]],

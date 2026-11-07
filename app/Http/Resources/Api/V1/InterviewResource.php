@@ -15,7 +15,7 @@ class InterviewResource extends JsonResource
             'resume_id' => $this->resume_id,
             'job_description_id' => $this->job_description_id,
             'status' => $this->status->value,
-            'total_questions' => Interview::TOTAL_QUESTIONS,
+            'total_questions' => Interview::INITIAL_QUESTION_COUNT,
             'started_at' => $this->started_at?->toISOString(),
             'completed_at' => $this->completed_at?->toISOString(),
         ];

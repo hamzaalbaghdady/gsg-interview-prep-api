@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->foreignId('resume_id')->constrained()->restrictOnDelete();
             $table->foreignId('job_description_id')->constrained()->restrictOnDelete();
-            $table->enum('status', ['ready', 'in_progress', 'completed', 'failed']);
+            $table->enum('status', ['preparing', 'in_progress', 'completed', 'failed']);
             $table->timestamp('started_at', 5)->nullable();
             $table->timestamp('completed_at', 5)->nullable();
             $table->index(['user_id', 'status']);

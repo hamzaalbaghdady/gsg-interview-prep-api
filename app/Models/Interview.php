@@ -10,12 +10,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['resume_id', 'job_description_id'])]
 class Interview extends Model
 {
-    public const TOTAL_QUESTIONS = 10;
+    public const INITIAL_QUESTION_COUNT = 10;
+
+    public const MAX_FOLLOW_UP_QUESTIONS = 3;
 
     public $timestamps = false;
 
     protected $attributes = [
-        'status' => InterviewStatus::READY->value,
+        'status' => InterviewStatus::PREPARING->value,
     ];
 
     protected function casts(): array
