@@ -7,6 +7,7 @@ use App\Enums\ParsingStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\StoreInterviewRequest;
 use App\Http\Resources\Api\V1\InterviewResource;
+use App\Jobs\ProcessInterviewQuestion;
 use App\Models\GapAnalysis;
 use App\Models\Resume;
 use App\Models\User;
@@ -71,6 +72,10 @@ class InterviewController extends Controller
             ], 409);
         }
 
+        // Trigger questions generation job
+        if ($interview->wasRecentlyCreated) {
+            ProcessInterviewQuestion::dispatch($interview->id)->afterCommit();
+        }
         return (new InterviewResource($interview))->response()
             ->setStatusCode($interview->wasRecentlyCreated ? 201 : 200);
     }

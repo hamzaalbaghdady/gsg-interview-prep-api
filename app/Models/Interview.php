@@ -3,9 +3,13 @@
 namespace App\Models;
 
 use App\Enums\InterviewStatus;
+use App\Models\InterviewQuestion;
+use App\Models\JobDescription;
+use App\Models\Resume;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['resume_id', 'job_description_id'])]
 class Interview extends Model
@@ -42,5 +46,12 @@ class Interview extends Model
     public function jobDescription(): BelongsTo
     {
         return $this->belongsTo(JobDescription::class);
+    }
+
+    // Interview - Question relationship
+    public function questions(): HasMany
+    {
+        return $this->hasMany(InterviewQuestion::class)
+            ->orderBy('sequence_number', 'asc');
     }
 }

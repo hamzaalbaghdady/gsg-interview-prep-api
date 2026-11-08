@@ -39,10 +39,11 @@ return [
     'python_ai' => [
         'job_url' => env('JOB_PYTHON_URL'),
         'roadmap_url' => env('ROADMAP_PYTHON_URL'),
+        'interview_url' => env('INTERVIEW_PYTHON_URL'),
         'token' => env('JOB_PYTHON_TOKEN'),
 
         'connect_timeout' => 5,
-        'timeout' => 30,
+        'timeout' => 45,
     ],
 
 ];

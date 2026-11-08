@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\GapAnalysisController;
 use App\Http\Controllers\Api\V1\InterviewController;
+use App\Http\Controllers\Api\V1\InterviewQuestionController;
 use App\Http\Controllers\Api\V1\JobDescriptionController;
 use App\Http\Controllers\Api\V1\ResumeController;
 use App\Http\Controllers\Api\V1\UserController;
@@ -50,4 +51,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Interviews
     Route::post('/interviews', [InterviewController::class, 'store'])->name('api.v1.interviews.store');
 
+    // Interview Question
+    Route::name('api.v1.interviews.questions.')->prefix('interviews/{interview}/questions')
+        ->controller(InterviewQuestionController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/next', 'next')->name('next');
+        });
 });
