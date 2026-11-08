@@ -40,6 +40,7 @@ return [
         'job_url' => env('JOB_PYTHON_URL'),
         'roadmap_url' => env('ROADMAP_PYTHON_URL'),
         'interview_url' => env('INTERVIEW_PYTHON_URL'),
+        'interview_answer_url' => env('INTERVIEW_ANSWER_PYTHON_URL'),
         'token' => env('JOB_PYTHON_TOKEN'),
 
         'connect_timeout' => 5,

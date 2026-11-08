@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['resume_id', 'job_description_id'])]
+#[Fillable(['resume_id', 'job_description_id', 'status'])]
 class Interview extends Model
 {
     public const INITIAL_QUESTION_COUNT = 10;
