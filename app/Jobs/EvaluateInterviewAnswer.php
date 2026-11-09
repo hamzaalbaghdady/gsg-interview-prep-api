@@ -7,6 +7,8 @@ use App\Models\InterviewAnswer;
 use App\Services\PythonInterviewAnswerService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class EvaluateInterviewAnswer implements ShouldQueue
 {
@@ -59,8 +61,13 @@ class EvaluateInterviewAnswer implements ShouldQueue
             ]);
     }
 
-    public function failed(): void
+    public function failed(?Throwable $exception = null): void
     {
+        Log::error('Interview answer evaluation permanently failed.', [
+            'answer_id' => $this->answerId,
+            'error_message' => $exception?->getMessage(),
+        ]);
+
         InterviewAnswer::query()->whereKey($this->answerId)
             ->whereIn('evaluation_status', [InterviewAnswerStatus::PENDING->value, InterviewAnswerStatus::IN_PROGRESS->value])
             ->update(['evaluation_status' => InterviewAnswerStatus::FAILED->value]);

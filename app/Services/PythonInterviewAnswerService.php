@@ -39,7 +39,7 @@ class PythonInterviewAnswerService
         }
 
         $validator = Validator::make($payload, [
-            'score' => ['required', 'numeric'],
+            'score' => ['required', 'numeric', 'between:0,10'],
             'better_answer' => ['required', 'string'],
         ]);
 

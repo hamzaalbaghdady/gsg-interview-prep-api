@@ -25,7 +25,7 @@ class InterviewQuestionResource extends JsonResource
                 'answer',
                 fn() => $this->answer ? [
                     'id' => $this->answer->id,
-                    'answer' => $this->answer->answer,
+                    'text' => $this->answer->answer,
                     'created_at' => $this->answer->created_at?->toISOString(),
                 ] : null
             ),
