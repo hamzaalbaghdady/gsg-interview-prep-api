@@ -212,7 +212,7 @@
                     "Interviews"
                 ],
                 "summary": "Create an interview session",
-                "description": "Creates a ready interview session for an owned resume and job description. Both sources must be processed and contain text, and the exact pair must have a saved gap analysis.",
+                "description": "Creates an interview session in the preparing state for an owned resume and job description. Both sources must be processed and contain text, and the exact pair must have a saved gap analysis.",
                 "operationId": "createInterview",
                 "requestBody": {
                     "content": {
@@ -244,7 +244,7 @@
                         }
                     },
                     "201": {
-                        "description": "Interview session created in the ready state.",
+                        "description": "Interview session created in the preparing state.",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -263,7 +263,7 @@
                                         "id": 42,
                                         "resume_id": 12,
                                         "job_description_id": 34,
-                                        "status": "ready",
+                                        "status": "preparing",
                                         "total_questions": 10,
                                         "started_at": null,
                                         "completed_at": null
@@ -337,6 +337,143 @@
                                     "errors": {
                                         "gap_analysis": [
                                             "Run a gap analysis for this resume and job description before creating an interview."
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/interviews/{interview}/questions/{question}/answer": {
+            "post": {
+                "tags": [
+                    "Interviews"
+                ],
+                "summary": "Submit an interview answer",
+                "description": "Saves one answer for a question in an owned interview and queues its evaluation after saving. The client can show the next question as soon as the answer is saved. The interview becomes completed when all answers are saved, even if evaluations are still running.",
+                "operationId": "submitInterviewAnswer",
+                "parameters": [
+                    {
+                        "name": "interview",
+                        "in": "path",
+                        "description": "Interview ID.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 15
+                    },
+                    {
+                        "name": "question",
+                        "in": "path",
+                        "description": "Question ID from the interview question list.",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "example": 42
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "answer": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 10000,
+                                        "example": "I built REST APIs with FastAPI."
+                                    }
+                                },
+                                "required": [
+                                    "answer"
+                                ]
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "The same answer was already saved. Returns the existing answer ID and its current evaluation status without queuing another evaluation.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InterviewAnswerSubmission"
+                                },
+                                "example": {
+                                    "data": {
+                                        "answer_id": 101,
+                                        "evaluation_status": "completed"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "201": {
+                        "description": "Answer saved. Evaluation normally starts in the pending state. If queue dispatch fails, the saved answer is returned with a failed evaluation status.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/InterviewAnswerSubmission"
+                                },
+                                "example": {
+                                    "data": {
+                                        "answer_id": 101,
+                                        "evaluation_status": "pending"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing, invalid, or revoked Bearer token.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthenticatedError"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "The interview was not found for the authenticated user, or the question does not belong to the interview."
+                    },
+                    "409": {
+                        "description": "The question already has a different answer, or the interview is not accepting new answers.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "message": {
+                                            "type": "string",
+                                            "example": "This question already has an answer."
+                                        }
+                                    },
+                                    "required": [
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The answer must be a non-empty string of at most 10,000 characters.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationError"
+                                },
+                                "example": {
+                                    "message": "The answer field is required.",
+                                    "errors": {
+                                        "answer": [
+                                            "The answer field is required."
                                         ]
                                     }
                                 }
@@ -958,6 +1095,37 @@
     },
     "components": {
         "schemas": {
+            "InterviewAnswerSubmission": {
+                "type": "object",
+                "properties": {
+                    "data": {
+                        "type": "object",
+                        "properties": {
+                            "answer_id": {
+                                "type": "integer",
+                                "example": 101
+                            },
+                            "evaluation_status": {
+                                "type": "string",
+                                "enum": [
+                                    "pending",
+                                    "in_progress",
+                                    "completed",
+                                    "failed"
+                                ],
+                                "example": "pending"
+                            }
+                        },
+                        "required": [
+                            "answer_id",
+                            "evaluation_status"
+                        ]
+                    }
+                },
+                "required": [
+                    "data"
+                ]
+            },
             "InterviewRequest": {
                 "type": "object",
                 "properties": {
@@ -994,16 +1162,19 @@
                     },
                     "status": {
                         "type": "string",
+                        "description": "An interview is preparing while its initial questions are being generated, ready once those questions are saved, and in progress after the first answer is saved. It ends as completed or failed.",
                         "enum": [
+                            "preparing",
                             "ready",
                             "in_progress",
                             "completed",
                             "failed"
                         ],
-                        "example": "ready"
+                        "example": "preparing"
                     },
                     "total_questions": {
                         "type": "integer",
+                        "description": "Number of initial interview questions.",
                         "enum": [
                             10
                         ],

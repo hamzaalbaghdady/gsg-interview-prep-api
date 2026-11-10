@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\InterviewAnswerController;
 use App\Http\Controllers\Api\V1\GapAnalysisController;
 use App\Http\Controllers\Api\V1\InterviewController;
 use App\Http\Controllers\Api\V1\InterviewQuestionController;
@@ -56,5 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
         ->controller(InterviewQuestionController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/next', 'next')->name('next');
+            Route::post('/{question}/answer', [InterviewAnswerController::class, 'store'])
+                ->whereNumber('question')->name('answer.store');
         });
 });

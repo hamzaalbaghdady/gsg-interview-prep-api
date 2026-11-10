@@ -6,6 +6,7 @@ use App\Models\Interview;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['sequence_number', 'text', 'type'])]
 class InterviewQuestion extends Model
@@ -17,5 +18,8 @@ class InterviewQuestion extends Model
         return $this->belongsTo(Interview::class);
     }
 
-    // Answer relation
+    public function answer(): HasOne
+    {
+        return $this->hasOne(InterviewAnswer::class);
+    }
 }
