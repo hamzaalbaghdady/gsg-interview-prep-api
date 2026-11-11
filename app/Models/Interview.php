@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\InterviewStatus;
+use App\Models\FinalReport;
 use App\Models\InterviewQuestion;
 use App\Models\JobDescription;
 use App\Models\Resume;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['resume_id', 'job_description_id', 'status'])]
 class Interview extends Model
@@ -53,5 +55,11 @@ class Interview extends Model
     {
         return $this->hasMany(InterviewQuestion::class)
             ->orderBy('sequence_number', 'asc');
+    }
+
+    // Interview - Report relation
+    public function report(): HasOne
+    {
+        return $this->hasOne(FinalReport::class);
     }
 }

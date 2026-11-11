@@ -1,8 +1,9 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
-use App\Http\Controllers\Api\V1\InterviewAnswerController;
+use App\Http\Controllers\Api\V1\FinalReportController;
 use App\Http\Controllers\Api\V1\GapAnalysisController;
+use App\Http\Controllers\Api\V1\InterviewAnswerController;
 use App\Http\Controllers\Api\V1\InterviewController;
 use App\Http\Controllers\Api\V1\InterviewQuestionController;
 use App\Http\Controllers\Api\V1\JobDescriptionController;
@@ -60,4 +61,8 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/{question}/answer', [InterviewAnswerController::class, 'store'])
                 ->whereNumber('question')->name('answer.store');
         });
+
+    // Final Report
+    Route::get('interviews/{interview}/report', [FinalReportController::class, 'show'])
+        ->name('api.v1.interviews.report.show');
 });
