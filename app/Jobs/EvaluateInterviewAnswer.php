@@ -53,7 +53,7 @@ class EvaluateInterviewAnswer implements ShouldQueue
             $answer->answer,
         );
 
-        $updated = InterviewAnswer::query()->whereKey($answer->id)
+        InterviewAnswer::query()->whereKey($answer->id)
             ->where('evaluation_status', InterviewAnswerStatus::IN_PROGRESS->value)
             ->update([
                 'evaluation_status' => InterviewAnswerStatus::COMPLETED->value,
@@ -75,14 +75,6 @@ class EvaluateInterviewAnswer implements ShouldQueue
         // Dispatch report generation job if answer evaluation is already completed
         if ($answer->evaluation_status === InterviewAnswerStatus::COMPLETED) {
             $reportPreparation->prepareIfReady($interviewId); // safe on retry
-            return;
-        }
-        if ($answer->evaluation_status === InterviewAnswerStatus::FAILED) {
-            return;
-        }
-        // Dispatch report generation job if answer evaluation status is updated to completed
-        if ($updated === 1) {
-            $reportPreparation->prepareIfReady($interviewId);
         }
     }
 

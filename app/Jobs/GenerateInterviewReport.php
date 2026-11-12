@@ -6,7 +6,6 @@ use App\Enums\InterviewStatus;
 use App\Enums\ReportStatus;
 use App\Models\FinalReport;
 use App\Models\Interview;
-use App\Services\OverallInterviewScoreService;
 use App\Services\PythonInterviewReportService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -39,10 +38,8 @@ class GenerateInterviewReport implements ShouldQueue, ShouldBeUnique
         return [10, 30];
     }
 
-    public function handle(
-        PythonInterviewReportService $pythonService,
-        OverallInterviewScoreService $scoreService
-    ): void {
+    public function handle(PythonInterviewReportService $pythonService): void
+    {
 
         // get the report with resume, jobDescription, questions and answers
         $report = FinalReport::query()
@@ -62,7 +59,7 @@ class GenerateInterviewReport implements ShouldQueue, ShouldBeUnique
         }
 
         // update status to processing
-        FinalReport::query()
+        $updated = FinalReport::query()
             ->whereKey($report->id)
             ->whereIn('status', [
                 ReportStatus::PENDING->value,
@@ -72,27 +69,12 @@ class GenerateInterviewReport implements ShouldQueue, ShouldBeUnique
                 'status' => ReportStatus::PROCESSING->value,
             ]);
 
+        if ($updated === 0) {
+            return;
+        }
+
         // get the interview
         $interview = $report->interview;
-
-        // Calculate and persist the overall score if it doesn't exist.
-        DB::transaction(function () use ($report, $interview, $scoreService): void {
-            $lockedReport = FinalReport::query()
-                ->lockForUpdate()
-                ->findOrFail($report->id);
-
-            // Don't calculate or overwrite an existing score.
-            if ($lockedReport->overall_score !== null) {
-                return;
-            }
-            // calculate the overall_score
-            $lockedReport->overall_score = $scoreService->calculate(
-                $interview->questions
-            );
-
-            // Save the overall_score
-            $lockedReport->save();
-        });
 
         // get the result of the AI service
         $aiResult = $pythonService->generate($interview);
@@ -103,13 +85,9 @@ class GenerateInterviewReport implements ShouldQueue, ShouldBeUnique
                 ->lockForUpdate()
                 ->findOrFail($report->id);
 
-            if ($lockedReport->status === ReportStatus::COMPLETED) {
+            if ($lockedReport->status !== ReportStatus::PROCESSING) {
                 return;
             }
-
-            $lockedInterview = Interview::query()
-                ->lockForUpdate()
-                ->findOrFail($interview->id); //
 
             $lockedReport->fill([
                 'summary' => $aiResult['summary'],
@@ -120,9 +98,6 @@ class GenerateInterviewReport implements ShouldQueue, ShouldBeUnique
             ]);
 
             $lockedReport->save();
-
-            $lockedInterview->status = InterviewStatus::COMPLETED; // for now, this might change
-            $lockedInterview->save(); //
         });
     }
 

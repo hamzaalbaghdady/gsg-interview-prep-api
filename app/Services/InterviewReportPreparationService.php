@@ -13,6 +13,7 @@ use Throwable;
 
 class InterviewReportPreparationService
 {
+    public function __construct(private OverallInterviewScoreService $scoreService) {}
 
     public function prepareIfReady(int $interviewId): void
     {
@@ -21,11 +22,10 @@ class InterviewReportPreparationService
             // Lock the interview to prevent multiple report creation.
             $interview = Interview::query()->lockForUpdate()->findOrFail($interviewId);
 
-            // We will decide to use it if interview only complete after report is.
-            // // Only generate a report for an active interview.
-            // if ($interview->status !== InterviewStatus::IN_PROGRESS) {
-            //     return;
-            // }
+            // Only generate a report for an completed interview.
+            if ($interview->status !== InterviewStatus::COMPLETED) {
+                return;
+            }
 
             // Do not create another report.
             if ($interview->report()->exists()) {
@@ -51,9 +51,17 @@ class InterviewReportPreparationService
                 return;
             }
 
+            $questions = $interview->questions()
+                ->with('answer')
+                ->get();
+
+            // Calcualte the overall score
+            $overallScore = $this->scoreService->calculate($questions);
+
             // Create the report record.
             $report = $interview->report()->create([
                 'status' => ReportStatus::PENDING,
+                'overall_score' => $overallScore,
             ]);
 
             // Dispatch report generation only after the transaction commits.

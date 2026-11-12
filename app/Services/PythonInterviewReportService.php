@@ -94,7 +94,7 @@ class PythonInterviewReportService
             'summary' => ['required', 'string'],
             'improvement_areas' => ['required', 'array'],
             'dimensions' => ['required', 'array'],
-            'discrepancy_flag' => ['required', 'array'],
+            'discrepancy_flag' => ['present', 'array'],
         ])->validate();
     }
 }
