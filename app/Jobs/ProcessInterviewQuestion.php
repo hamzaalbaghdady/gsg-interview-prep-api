@@ -74,11 +74,11 @@ class ProcessInterviewQuestion implements ShouldQueue, ShouldBeUnique
                 return;
             }
 
-            foreach ($result['questions'] as $index => $questionText) {
+            foreach ($result['questions'] as $index => $question) {
 
                 $lockedInterview->questions()->create([
                     'sequence_number' => $index + 1, // from 1 to 10
-                    'text' => $questionText,
+                    'text' => $question['text'],
                     'type' => 'base'
                 ]);
             }

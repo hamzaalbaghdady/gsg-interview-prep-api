@@ -24,8 +24,8 @@ class PythonInterviewAnswerService
 
         $response = $request->post($url, [
             'interview_id' => $interviewId,
-            'question_id' => $questionId,
-            'answer' => $answer,
+            'id' => $questionId,
+            'text' => $answer,
         ]);
 
         if (! $response->successful()) {
