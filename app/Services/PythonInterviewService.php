@@ -89,7 +89,10 @@ class PythonInterviewService
         // Ensure the Python system returned an array of exactly 10 questions
         $validator = Validator::make($payload, [
             'questions' => ['required', 'array', 'size:10'],
-            'questions.*' => ['required', 'string', 'min:10', 'max:5000', 'distinct'],
+            'questions.*' => ['required', 'array'],
+            'questions.*.text' => ['required', 'string', 'min:10', 'max:5000', 'distinct'],
+            'questions.*.id' => ['nullable', 'integer'],
+            'questions.*.type' => ['nullable', 'string'],
         ]);
 
         if ($validator->fails()) {
