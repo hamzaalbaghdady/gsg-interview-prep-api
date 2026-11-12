@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Enums\InterviewAnswerStatus;
 use App\Models\InterviewAnswer;
+use App\Services\InterviewReportPreparationService;
 use App\Services\PythonInterviewAnswerService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -25,7 +26,7 @@ class EvaluateInterviewAnswer implements ShouldQueue
         return [5, 10];
     }
 
-    public function handle(PythonInterviewAnswerService $service): void
+    public function handle(PythonInterviewAnswerService $service, InterviewReportPreparationService $reportPreparation): void
     {
         $answer = InterviewAnswer::query()
             ->with('question:id,interview_id,sequence_number')
@@ -59,6 +60,22 @@ class EvaluateInterviewAnswer implements ShouldQueue
                 'score' => $result['score'],
                 'better_answer' => $result['better_answer'],
             ]);
+
+        // get answer
+        $answer = InterviewAnswer::query()
+            ->with('question:id,interview_id,sequence_number')
+            ->find($this->answerId);
+
+        if ($answer === null) {
+            return;
+        }
+        // get interview id
+        $interviewId = $answer->question->interview_id;
+
+        // Dispatch report generation job if answer evaluation is already completed
+        if ($answer->evaluation_status === InterviewAnswerStatus::COMPLETED) {
+            $reportPreparation->prepareIfReady($interviewId); // safe on retry
+        }
     }
 
     public function failed(?Throwable $exception = null): void
