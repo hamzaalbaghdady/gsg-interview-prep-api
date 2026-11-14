@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiServiceException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
-use RuntimeException;
 
 class PythonInterviewAnswerService
 {
@@ -12,8 +12,9 @@ class PythonInterviewAnswerService
     {
         $url = config('services.python_ai.interview_answer_url');
 
-        if (! is_string($url) || ! filter_var($url, FILTER_VALIDATE_URL)) {
-            throw new RuntimeException('Python interview answer endpoint configuration is missing or invalid.');
+        if (! is_string($url) || ! filter_var($url, FILTER_VALIDATE_URL)
+            || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+            throw new AiServiceException('service_configuration');
         }
 
         $request = Http::acceptJson()->connectTimeout(5)->timeout(45);
@@ -29,13 +30,13 @@ class PythonInterviewAnswerService
         ]);
 
         if (! $response->successful()) {
-            throw new RuntimeException("Python interview evaluation failed with HTTP code {$response->status()}.");
+            throw AiServiceException::fromResponse($response);
         }
 
         $payload = $response->json();
 
         if (! is_array($payload) || ($payload['question_id'] ?? $payload['id'] ?? null) !== $questionId) {
-            throw new RuntimeException('Python evaluation response does not match the submitted answer.');
+            throw new AiServiceException('invalid_response');
         }
 
         $validator = Validator::make($payload, [
@@ -44,7 +45,7 @@ class PythonInterviewAnswerService
         ]);
 
         if ($validator->fails()) {
-            throw new RuntimeException('Python evaluation response has an invalid format.');
+            throw new AiServiceException('invalid_response');
         }
 
         return $validator->validated();

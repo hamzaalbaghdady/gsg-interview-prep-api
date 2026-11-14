@@ -74,9 +74,11 @@ class InterviewReportPreparationService
                     // Prevent a report from remaining pending if dispatch fails.
                     FinalReport::query()
                         ->whereKey($report->id)
+                        ->where('ai_run', 0)
                         ->where('status', ReportStatus::PENDING->value)
                         ->update([
                             'status' => ReportStatus::FAILED->value,
+                            'ai_error_code' => 'queue_unavailable',
                         ]);
                 }
             });

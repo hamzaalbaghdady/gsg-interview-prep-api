@@ -3,17 +3,15 @@
 namespace App\Models;
 
 use App\Enums\InterviewStatus;
-use App\Models\FinalReport;
-use App\Models\InterviewQuestion;
-use App\Models\JobDescription;
-use App\Models\Resume;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['resume_id', 'job_description_id', 'status'])]
+#[Hidden(['ai_run', 'ai_error_code'])]
 class Interview extends Model
 {
     public const INITIAL_QUESTION_COUNT = 10;
@@ -29,6 +27,7 @@ class Interview extends Model
     protected function casts(): array
     {
         return [
+            'ai_run' => 'integer',
             'status' => InterviewStatus::class,
             'started_at' => 'datetime',
             'completed_at' => 'datetime',

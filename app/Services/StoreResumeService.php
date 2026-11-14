@@ -6,6 +6,7 @@ use App\Jobs\ProcessResume;
 use App\Models\Resume;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -72,18 +73,21 @@ class StoreResumeService
         }
 
         if ($resume->wasRecentlyCreated) {
-            // File and record exist before a worker can start processing.
-            try {
-                ProcessResume::dispatch($resume->getKey())
-                    ->onConnection(config('resumes.queue_connection'))
-                    ->afterCommit();
-            } catch (Throwable $exception) {
-                $resume->update(['parsing_status' => Resume::FAILED]);
-                Log::warning('Resume processing could not be queued.', [
-                    'resume_id' => $resume->getKey(),
-                    'exception_type' => $exception::class,
-                ]);
-            }
+            DB::afterCommit(function () use ($resume): void {
+                try {
+                    Bus::dispatch((new ProcessResume($resume->id))->onConnection(config('resumes.queue_connection')));
+                } catch (Throwable $exception) {
+                    $resume->newQuery()->whereKey($resume->id)->where('ai_run', 0)->where('parsing_status', 'pending')->update([
+                        'parsing_status' => 'failed',
+                        'ai_error_code' => 'queue_unavailable',
+                    ]);
+                    Log::warning('AI processing could not be queued.', [
+                        'record_id' => $resume->id,
+                        'exception_type' => $exception::class,
+                    ]);
+                }
+            });
+            $resume->refresh();
         }
 
         return $resume;

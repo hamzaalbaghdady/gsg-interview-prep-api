@@ -4,17 +4,20 @@ namespace App\Models;
 
 use App\Enums\ReportStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['overall_score', 'summary', 'improvement_areas', 'dimensions', 'discrepancy_flag', 'status'])]
+#[Hidden(['ai_run', 'ai_error_code'])]
 class FinalReport extends Model
 {
     //cast
     protected function casts(): array
     {
         return [
+            'ai_run' => 'integer',
             'overall_score' => 'float',
             'improvement_areas' => AsArrayObject::class,
             'dimensions' => AsArrayObject::class,

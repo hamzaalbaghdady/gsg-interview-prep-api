@@ -2,35 +2,48 @@
 
 namespace App\Jobs;
 
-use App\Enums\InterviewStatus;
 use App\Enums\ReportStatus;
+use App\Exceptions\AiServiceException;
 use App\Models\FinalReport;
 use App\Models\Interview;
+use App\Services\Ai\AiFailure;
 use App\Services\PythonInterviewReportService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
-class GenerateInterviewReport implements ShouldQueue, ShouldBeUnique
+class GenerateInterviewReport implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable;
 
-    public int $tries = 3;
+    // Waiting for another worker's lock must not consume the execution failure budget.
+    public int $tries = 0;
 
-    public int $timeout = 90;
+    public int $maxExceptions = 3;
+
+    public bool $countCrashesAsExceptions = true;
+
+    public int $timeout = 75;
 
     public int $uniqueFor = 300;
 
-    public function __construct(public int $reportId) {}
+    // Automatic retries keep this run; manual retries start a new one.
+    public int $run = 0;
+
+    public function __construct(public int $reportId, int $run = 0)
+    {
+        $this->run = $run;
+    }
 
     public function uniqueId(): string
     {
-        return (string) $this->reportId;
+        return $this->reportId.':'.$this->run;
     }
 
     public function backoff(): array
@@ -43,23 +56,22 @@ class GenerateInterviewReport implements ShouldQueue, ShouldBeUnique
 
         // get the report with resume, jobDescription, questions and answers
         $report = FinalReport::query()
+            ->where('ai_run', $this->run)
+            ->whereIn('status', [ReportStatus::PENDING->value, ReportStatus::PROCESSING->value])
             ->with([
                 'interview.resume',
                 'interview.jobDescription',
                 'interview.questions.answer',
             ])
-            ->findOrFail($this->reportId);
+            ->find($this->reportId);
 
-        // check if report is completed or failed
-        if (in_array($report->status, [
-            ReportStatus::COMPLETED,
-            ReportStatus::FAILED,
-        ], true)) {
+        if ($report === null) {
             return;
         }
 
         // update status to processing
         $updated = FinalReport::query()
+            ->where('ai_run', $this->run)
             ->whereKey($report->id)
             ->whereIn('status', [
                 ReportStatus::PENDING->value,
@@ -77,13 +89,24 @@ class GenerateInterviewReport implements ShouldQueue, ShouldBeUnique
         $interview = $report->interview;
 
         // get the result of the AI service
-        $aiResult = $pythonService->generate($interview);
+        try {
+            $aiResult = $pythonService->generate($interview);
+        } catch (AiServiceException $exception) {
+            if (! AiFailure::automaticRetry($exception->errorCode)) {
+                $this->fail($exception);
+
+                return;
+            }
+
+            throw $exception;
+        }
 
         // start a transaction to update report
-        DB::transaction(function () use ($report, $interview, $aiResult): void {
+        DB::transaction(function () use ($report, $aiResult): void {
             $lockedReport = FinalReport::query()
+                ->where('ai_run', $this->run)
                 ->lockForUpdate()
-                ->findOrFail($report->id);
+                ->find($report->id);
 
             if ($lockedReport->status !== ReportStatus::PROCESSING) {
                 return;
@@ -101,23 +124,33 @@ class GenerateInterviewReport implements ShouldQueue, ShouldBeUnique
         });
     }
 
+    public function middleware(): array
+    {
+        return [(new WithoutOverlapping('FinalReport:'.$this->reportId))
+            ->releaseAfter(5)->expireAfter($this->timeout + 5)];
+    }
+
     public function failed(?Throwable $exception): void
     {
-        // update report if failed
-        FinalReport::query()
-            ->whereKey($this->reportId)
-            ->whereIn('status', [
-                ReportStatus::PENDING->value,
-                ReportStatus::PROCESSING->value,
-            ])
+        $code = AiFailure::code($exception);
+
+        // A stale callback must not overwrite a newer run or a completed result.
+        $updated = FinalReport::query()->whereKey($this->reportId)->where('ai_run', $this->run)
+            ->whereIn('status', [ReportStatus::PENDING->value, ReportStatus::PROCESSING->value])
             ->update([
                 'status' => ReportStatus::FAILED->value,
+                'ai_error_code' => $code,
             ]);
 
-        // log the exceptions
+        if ($updated === 0) {
+            return;
+        }
+
         Log::error('Interview report generation failed.', [
             'report_id' => $this->reportId,
-            'exception' => $exception?->getMessage(),
+            'run' => $this->run,
+            'error_code' => $code,
+            'exception_type' => $exception ? $exception::class : null,
         ]);
     }
 }

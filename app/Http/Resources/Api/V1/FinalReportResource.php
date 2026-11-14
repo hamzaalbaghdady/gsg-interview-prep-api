@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\Ai\AiFailure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -17,6 +18,7 @@ class FinalReportResource extends JsonResource
         return [
 
             'id' => $this->id,
+            'ai_failure' => AiFailure::details($this->resource, 'status'),
             'interview_id' => $this->interview_id,
             'interview_status' => $this->interview->status->value,
 

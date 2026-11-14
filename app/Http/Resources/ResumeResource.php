@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Resume;
+use App\Services\Ai\AiFailure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -10,12 +11,15 @@ class ResumeResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $failure = AiFailure::details($this->resource, 'parsing_status');
+
         return [
             'id' => $this->id,
+            'ai_failure' => $failure,
             'title' => $this->title,
             'parsing_status' => $this->parsing_status,
             'processing_error' => $this->parsing_status === Resume::FAILED
-                ? 'Resume processing failed. Please try again later.'
+                ? $failure['error_message']
                 : null,
             'extracted_text' => $this->when(
                 $request->routeIs('resumes.show'),

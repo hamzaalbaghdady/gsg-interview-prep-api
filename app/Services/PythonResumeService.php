@@ -2,11 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiServiceException;
 use App\Models\Resume;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
-use RuntimeException;
+use League\Flysystem\FilesystemException;
 
 class PythonResumeService
 {
@@ -16,23 +17,28 @@ class PythonResumeService
 
         if (! is_string($url) || ! filter_var($url, FILTER_VALIDATE_URL)
             || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
-            throw new RuntimeException('Resume processing service is not configured.');
+            throw new AiServiceException('service_configuration');
+        }
+
+        // Leave time for failure handling before the 45-second queue job deadline.
+        $request = Http::acceptJson()->connectTimeout(5)->timeout(max(1, min((int) config('resumes.timeout', 30), 30)));
+
+        if ($token = config('resumes.python_token')) {
+            $request = $request->withToken($token);
         }
 
         $disk = Storage::disk('local');
-        $stream = $disk->readStream($resume->file_path);
-
-        if (! is_resource($stream)) {
-            throw new RuntimeException('Resume file is unavailable.');
-        }
+        $stream = null;
 
         try {
-            $request = Http::acceptJson()
-                ->connectTimeout(config('resumes.connect_timeout'))
-                ->timeout(config('resumes.timeout'));
+            if (! $disk->exists($resume->file_path)) {
+                throw new AiServiceException('file_unavailable');
+            }
 
-            if ($token = config('resumes.python_token')) {
-                $request = $request->withToken($token);
+            $stream = $disk->readStream($resume->file_path);
+
+            if (! is_resource($stream)) {
+                throw new AiServiceException('file_unavailable');
             }
 
             $response = $request->attach(
@@ -41,19 +47,24 @@ class PythonResumeService
                 basename($resume->file_path),
                 ['Content-Type' => $disk->mimeType($resume->file_path) ?: 'application/octet-stream']
             )->post($url);
+        } catch (FilesystemException $exception) {
+            // Storage can throw instead of returning false; preserve the cause without exposing it.
+            throw new AiServiceException('file_unavailable', $exception);
         } finally {
-            fclose($stream);
+            // Some transports close the stream themselves, including on failed uploads.
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
         }
 
         if (! $response->successful()) {
-            // Do not include upstream response bodies or resume contents in errors.
-            throw new RuntimeException('Resume processing service failed.');
+            throw AiServiceException::fromResponse($response);
         }
 
         $payload = $response->json();
 
         if (! is_array($payload)) {
-            throw new RuntimeException('Resume processing service returned invalid JSON.');
+            throw new AiServiceException('invalid_response');
         }
 
         $validator = Validator::make($payload, [
@@ -67,7 +78,7 @@ class PythonResumeService
 
         if ($validator->fails() || trim($payload['extracted_text'] ?? '') === ''
             || strlen($payload['extracted_text']) > 16777215) {
-            throw new RuntimeException('Resume processing service returned an invalid result.');
+            throw new AiServiceException('invalid_response');
         }
 
         return $validator->validated();

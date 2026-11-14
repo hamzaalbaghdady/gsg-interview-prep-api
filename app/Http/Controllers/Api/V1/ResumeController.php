@@ -17,8 +17,8 @@ class ResumeController extends Controller
     {
         return ResumeResource::collection(
             $request->user()->resumes()
-            ->select(['id','title','parsing_status','created_at','updated_at'])
-            ->latest('id')->paginate(15)
+                ->select(['id', 'title', 'parsing_status', 'ai_error_code', 'created_at', 'updated_at'])
+                ->latest('id')->paginate(15)
         );
     }
 

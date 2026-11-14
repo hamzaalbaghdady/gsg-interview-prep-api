@@ -10,6 +10,7 @@ use OpenApi\Spec as OA;
     type: 'object',
     required: ['id', 'resume_id', 'job_description_id', 'status', 'total_questions', 'started_at', 'completed_at'],
     properties: [
+        'ai_failure' => new OA\Schema(ref: '#/components/schemas/AiFailure'),
         'id' => new OA\Schema(type: 'integer', example: 42),
         'resume_id' => new OA\Schema(type: 'integer', example: 12),
         'job_description_id' => new OA\Schema(type: 'integer', example: 34),

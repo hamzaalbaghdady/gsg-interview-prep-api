@@ -9,6 +9,7 @@ use OpenApi\Spec as OA;
     type: 'object',
     required: ['id', 'title', 'company_name', 'parsing_status', 'created_at', 'updated_at'],
     properties: [
+        'ai_failure' => new OA\Schema(ref: '#/components/schemas/AiFailure'),
         'id' => new OA\Schema(type: 'integer', example: 1),
         'title' => new OA\Schema(type: 'string', maxLength: 150, example: 'Laravel Backend Developer'),
         'company_name' => new OA\Schema(type: 'string', nullable: true, example: 'Example Company'),

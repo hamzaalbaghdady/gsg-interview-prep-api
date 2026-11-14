@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable(['user_id', 'title', 'file_path', 'file_hash', 'extracted_text', 'parsing_status'])]
-#[Hidden(['file_path', 'file_hash'])]
+#[Hidden(['file_path', 'file_hash', 'ai_run', 'ai_error_code'])]
 class Resume extends Model
 {
     public const PENDING = 'pending';
@@ -20,6 +20,11 @@ class Resume extends Model
     public const COMPLETED = 'completed';
 
     public const FAILED = 'failed';
+
+    protected function casts(): array
+    {
+        return ['ai_run' => 'integer'];
+    }
 
     public function user(): BelongsTo
     {

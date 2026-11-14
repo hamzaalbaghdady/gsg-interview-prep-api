@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\Ai\AiFailure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -23,8 +24,9 @@ class InterviewQuestionResource extends JsonResource
             // Conditionally load the answer payload if relation is eager-loaded
             'answer' => $this->whenLoaded(
                 'answer',
-                fn() => $this->answer ? [
+                fn () => $this->answer ? [
                     'id' => $this->answer->id,
+                    'ai_failure' => AiFailure::details($this->answer, 'evaluation_status'),
                     'text' => $this->answer->answer,
                     'evaluation_status' => $this->answer->evaluation_status?->value,
                     'score' => $this->answer->score,

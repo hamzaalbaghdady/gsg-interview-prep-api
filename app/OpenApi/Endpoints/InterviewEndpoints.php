@@ -36,6 +36,7 @@ final class InterviewEndpoints
                         'resume_id' => 12,
                         'job_description_id' => 34,
                         'status' => 'preparing',
+                        'ai_failure' => null,
                         'total_questions' => Interview::INITIAL_QUESTION_COUNT,
                         'started_at' => null,
                         'completed_at' => null,
@@ -84,7 +85,7 @@ final class InterviewEndpoints
         operationId: 'submitInterviewAnswer',
         tags: ['Interviews'],
         summary: 'Submit an interview answer',
-        description: 'Saves one answer for a question in an owned interview and queues its evaluation after saving. The client can show the next question as soon as the answer is saved. The interview becomes completed when all answers are saved, even if evaluations are still running.',
+        description: 'Saves one answer for a question in an owned interview and queues its evaluation after saving. The client can show the next question as soon as the answer is saved. The interview becomes completed when all answers are saved, even if evaluations are still running. A failed evaluation exposes ai_failure; use the answer retry endpoint instead of resubmitting the same answer.',
         parameters: [
             new OA\Parameter\Path(name: 'interview', description: 'Interview ID.', schema: new OA\Schema(type: 'integer'), example: 15),
             new OA\Parameter\Path(name: 'question', description: 'Question ID from the interview question list.', schema: new OA\Schema(type: 'integer'), example: 42),
@@ -105,7 +106,7 @@ final class InterviewEndpoints
                 description: 'The same answer was already saved. Returns the existing answer ID and its current evaluation status without queuing another evaluation.',
                 content: new OA\MediaType\Json(
                     ref: '#/components/schemas/InterviewAnswerSubmission',
-                    example: ['data' => ['answer_id' => 101, 'evaluation_status' => 'completed']],
+                    example: ['data' => ['answer_id' => 101, 'evaluation_status' => 'completed', 'ai_failure' => null]],
                 ),
             ),
             new OA\Response(
@@ -113,7 +114,7 @@ final class InterviewEndpoints
                 description: 'Answer saved. Evaluation normally starts in the pending state. If queue dispatch fails, the saved answer is returned with a failed evaluation status.',
                 content: new OA\MediaType\Json(
                     ref: '#/components/schemas/InterviewAnswerSubmission',
-                    example: ['data' => ['answer_id' => 101, 'evaluation_status' => 'pending']],
+                    example: ['data' => ['answer_id' => 101, 'evaluation_status' => 'pending', 'ai_failure' => null]],
                 ),
             ),
             new OA\Response(response: 401, description: 'Missing, invalid, or revoked Bearer token.', content: new OA\MediaType\Json(ref: '#/components/schemas/UnauthenticatedError')),

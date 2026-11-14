@@ -2,16 +2,25 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiServiceException;
 use App\Models\GapAnalysis;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
-use RuntimeException;
 
 class PythonRoadmapService
 {
     public function generate(GapAnalysis $analysis): array
     {
         $url = config('services.python_ai.roadmap_url');
+
+        if (! is_string($url) || ! filter_var($url, FILTER_VALIDATE_URL)
+            || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+            throw new AiServiceException('service_configuration');
+        }
+
+        if ($analysis->jobDescription === null) {
+            throw new AiServiceException('missing_input');
+        }
 
         $request = Http::acceptJson()
             ->connectTimeout(5)
@@ -28,14 +37,14 @@ class PythonRoadmapService
             'matching_skills' => $analysis->analysis['matching_skills'] ?? [],
         ]);
 
-        if (!$response->successful()) {
-            throw new RuntimeException("Python roadmap service returned HTTP {$response->status()} state failure.");
+        if (! $response->successful()) {
+            throw AiServiceException::fromResponse($response);
         }
 
         $payload = $response->json();
 
-        if (!is_array($payload)) {
-            throw new RuntimeException('Python roadmap service returned an invalid JSON data payload.');
+        if (! is_array($payload)) {
+            throw new AiServiceException('invalid_response');
         }
 
         // Validate response
@@ -67,9 +76,8 @@ class PythonRoadmapService
             'roadmaps.*.resources.*.url' => ['required', 'url'],
         ]);
 
-
         if ($validator->fails()) {
-            throw new RuntimeException('Python roadmap service response failed schema validation rules.');
+            throw new AiServiceException('invalid_response');
         }
 
         return $validator->validated();
