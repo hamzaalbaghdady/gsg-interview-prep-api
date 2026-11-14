@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AiRetryController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\FinalReportController;
 use App\Http\Controllers\Api\V1\GapAnalysisController;
@@ -9,8 +10,6 @@ use App\Http\Controllers\Api\V1\InterviewQuestionController;
 use App\Http\Controllers\Api\V1\JobDescriptionController;
 use App\Http\Controllers\Api\V1\ResumeController;
 use App\Http\Controllers\Api\V1\UserController;
-use App\Jobs\GenerateSkillRoadmap;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Route;
 
 // Health Check
@@ -30,6 +29,16 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/me', [UserController::class, 'show']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Retry only failed AI operations on the existing records.
+    Route::middleware('throttle:10,1')->controller(AiRetryController::class)->group(function () {
+        Route::post('resumes/{resume}/retry', 'resume')->whereNumber('resume');
+        Route::post('job-descriptions/{jobDescription}/retry', 'jobDescription')->whereNumber('jobDescription');
+        Route::post('gap-analyses/{analysis}/roadmap/retry', 'roadmap')->whereNumber('analysis');
+        Route::post('interviews/{interview}/report/retry', 'report')->whereNumber('interview');
+        Route::post('interviews/{interview}/retry', 'interview')->whereNumber('interview');
+        Route::post('interviews/{interview}/questions/{question}/answer/retry', 'answer')->whereNumber(['interview', 'question']);
+    });
 
     // Resumes routes
     Route::get('/resumes', [ResumeController::class, 'index'])->name('resumes.index');

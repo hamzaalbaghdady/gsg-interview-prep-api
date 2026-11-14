@@ -11,8 +11,9 @@ use OpenApi\Spec as OA;
     properties: [
         'data' => new OA\Schema(
             type: 'object',
-            required: ['answer_id', 'evaluation_status'],
+            required: ['answer_id', 'evaluation_status', 'ai_failure'],
             properties: [
+                'ai_failure' => new OA\Schema(ref: '#/components/schemas/AiFailure'),
                 'answer_id' => new OA\Schema(type: 'integer', example: 101),
                 'evaluation_status' => new OA\Schema(
                     type: 'string',

@@ -6,6 +6,7 @@ use App\Enums\InterviewStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\Api\V1\InterviewQuestionResource;
 use App\Models\Interview;
+use App\Services\Ai\AiFailure;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -30,10 +31,9 @@ class InterviewQuestionController extends Controller
         return response()->json([
             'status' => 'success',
             'interview_status' => $interview->status,
-            'data' => InterviewQuestionResource::collection($questions)
+            'data' => InterviewQuestionResource::collection($questions),
         ]);
     }
-
 
     /**
      * fetching the single next unanswered question in the queue.
@@ -71,14 +71,14 @@ class InterviewQuestionController extends Controller
                 'status' => 'success',
                 'interview_status' => $interview->status,
                 'message' => 'All generated questions have been answered.',
-                'data' => null
+                'data' => null,
             ]);
         }
 
         return response()->json([
             'status' => 'success',
             'interview_status' => $interview->status,
-            'data' => new InterviewQuestionResource($nextQuestion)
+            'data' => new InterviewQuestionResource($nextQuestion),
         ]);
     }
 
@@ -110,7 +110,8 @@ class InterviewQuestionController extends Controller
             InterviewStatus::FAILED => response()->json([
                 'status' => 'error',
                 'interview_status' => $interview->status,
-                'message' => 'Interview preparation failed. Please try again.',
+                'message' => AiFailure::details($interview, 'status')['error_message'],
+                'ai_failure' => AiFailure::details($interview, 'status'),
             ], 409),
 
             default => null,

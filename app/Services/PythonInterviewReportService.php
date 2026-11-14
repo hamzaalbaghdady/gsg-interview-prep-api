@@ -3,12 +3,10 @@
 namespace App\Services;
 
 use App\Enums\InterviewAnswerStatus;
+use App\Exceptions\AiServiceException;
 use App\Models\Interview;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\ValidationException;
-use InvalidArgumentException;
-use UnexpectedValueException;
 
 class PythonInterviewReportService
 {
@@ -28,9 +26,7 @@ class PythonInterviewReportService
 
         // check questions count
         if ($questions->count() !== Interview::INITIAL_QUESTION_COUNT) {
-            throw new InvalidArgumentException(
-                'The interview does not have the required number of questions.'
-            );
+            throw new AiServiceException('missing_input');
         }
 
         // map each question with its answer
@@ -41,9 +37,7 @@ class PythonInterviewReportService
                 $answer === null ||
                 $answer->evaluation_status !== InterviewAnswerStatus::COMPLETED
             ) {
-                throw new InvalidArgumentException(
-                    'All answers must be evaluated before generating the report.'
-                );
+                throw new AiServiceException('missing_input');
             }
 
             return [
@@ -56,6 +50,16 @@ class PythonInterviewReportService
             ];
         })->all();
 
+        if ($interview->resume === null || $interview->jobDescription === null) {
+            throw new AiServiceException('missing_input');
+        }
+
+        $url = config('services.python_ai.interview_report_url');
+        if (! is_string($url) || ! filter_var($url, FILTER_VALIDATE_URL)
+            || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+            throw new AiServiceException('service_configuration');
+        }
+
         // required data for the AI service
         $payload = [
             'interview_id' => $interview->id,
@@ -67,34 +71,42 @@ class PythonInterviewReportService
         // send request
         $request = Http::acceptJson()
             ->asJson()
-            ->connectTimeout(config('services.python_ai.connect_timeout', 5))
-            ->timeout(config('services.python_ai.timeout', 60));
+            ->connectTimeout(max(1, min((int) config('services.python_ai.connect_timeout', 5), 5)))
+            ->timeout(max(1, min((int) config('services.python_ai.timeout', 60), 60)));
 
         $token = config('services.python_ai.token');
 
-        if (!empty($token)) {
+        if (! empty($token)) {
             $request->withToken($token);
         }
 
         $response = $request->post(
-            config('services.python_ai.interview_report_url'),
+            $url,
             $payload
-        )->throw();
+        );
+
+        if (! $response->successful()) {
+            throw AiServiceException::fromResponse($response);
+        }
 
         $data = $response->json();
 
         if (! is_array($data)) {
-            throw new UnexpectedValueException(
-                'The Python AI service returned an invalid response.'
-            );
+            throw new AiServiceException('invalid_response');
         }
 
         // validate response
-        return Validator::make($data, [
+        $validator = Validator::make($data, [
             'summary' => ['required', 'string'],
             'improvement_areas' => ['required', 'array'],
             'dimensions' => ['required', 'array'],
             'discrepancy_flag' => ['present', 'array'],
-        ])->validate();
+        ]);
+
+        if ($validator->fails()) {
+            throw new AiServiceException('invalid_response');
+        }
+
+        return $validator->validated();
     }
 }

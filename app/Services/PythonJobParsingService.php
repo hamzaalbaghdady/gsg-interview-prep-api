@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiServiceException;
 use App\Models\JobDescription;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
-use RuntimeException;
 
 class PythonJobParsingService
 {
@@ -17,14 +17,15 @@ class PythonJobParsingService
         $url = config('services.python_ai.job_url');
 
         // Check and validate the url
-        if (!is_string($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
-            throw new RuntimeException('Python AI service endpoint is missing or invalid.');
+        if (! is_string($url) || ! filter_var($url, FILTER_VALIDATE_URL)
+            || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+            throw new AiServiceException('service_configuration');
         }
 
         // Prepare the request header and configurations
         $request = Http::acceptJson()
-            ->connectTimeout(config('services.python_ai.connect_timeout', 5))
-            ->timeout(config('services.python_ai.timeout', 30));
+            ->connectTimeout(max(1, min((int) config('services.python_ai.connect_timeout', 5), 5)))
+            ->timeout(max(1, min((int) config('services.python_ai.timeout', 30), 30)));
 
         // Inject authorization bearer token if required by the AI layer
         if ($token = config('services.python_ai.token')) {
@@ -37,16 +38,16 @@ class PythonJobParsingService
         ]);
 
         // Throw exception if request not successful
-        if (!$response->successful()) {
-            throw new RuntimeException("Python AI service returned HTTP {$response->status()} while extracting skills.");
+        if (! $response->successful()) {
+            throw AiServiceException::fromResponse($response);
         }
 
         // Parse json to array
         $payload = $response->json();
 
         // Check array
-        if (!is_array($payload)) {
-            throw new RuntimeException('Python AI service returned a response that is not a JSON object or array.');
+        if (! is_array($payload)) {
+            throw new AiServiceException('invalid_response');
         }
 
         // Ensure the Python response structure is completely clean
@@ -60,12 +61,7 @@ class PythonJobParsingService
 
         // Throw exception if validator fails
         if ($validator->fails()) {
-            $errors = $validator->errors()->toArray();
-
-            throw new RuntimeException(
-                'Python AI service response failed schema validation: '
-                    . json_encode($errors, JSON_UNESCAPED_SLASHES)
-            );
+            throw new AiServiceException('invalid_response');
         }
 
         return $validator->validated();

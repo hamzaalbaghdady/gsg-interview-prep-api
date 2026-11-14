@@ -3,6 +3,7 @@
 namespace App\Http\Resources\Api\V1;
 
 use App\Models\Interview;
+use App\Services\Ai\AiFailure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -12,6 +13,7 @@ class InterviewResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'ai_failure' => AiFailure::details($this->resource, 'status'),
             'resume_id' => $this->resume_id,
             'job_description_id' => $this->job_description_id,
             'status' => $this->status->value,

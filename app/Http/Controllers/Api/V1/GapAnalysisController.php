@@ -7,14 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Jobs\GenerateSkillRoadmap;
 use App\Models\GapAnalysis;
 use App\Models\JobDescription;
+use App\Services\Ai\AiFailure;
 use App\Services\SkillGapAnalysisService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Throwable;
 
 class GapAnalysisController extends Controller
 {
-
     /**
      * Calculate a real-time Skill Gap Analysis between a specific job and an uploaded resume.
      */
@@ -62,16 +62,22 @@ class GapAnalysisController extends Controller
 
         // Dispatch the roadmap job
         if ($analysis->wasRecentlyCreated) {
-            try {
-                GenerateSkillRoadmap::dispatch($analysis->id)->afterCommit();
-            } catch (Throwable $exception) {
-                GapAnalysis::query()
-                    ->whereKey($analysis->id)
-                    ->update([
-                        'roadmap_status' => ParsingStatus::FAILED->value,
-                    ]);
-            }
+            DB::afterCommit(function () use ($analysis): void {
+                try {
+                    GenerateSkillRoadmap::dispatch($analysis->id);
+                } catch (Throwable $exception) {
+                    report($exception);
+                    GapAnalysis::query()->whereKey($analysis->id)
+                        ->where('ai_run', 0)->where('roadmap_status', ParsingStatus::PENDING->value)
+                        ->update([
+                            'roadmap_status' => ParsingStatus::FAILED->value,
+                            'ai_error_code' => 'queue_unavailable',
+                        ]);
+                }
+            });
         }
+
+        $analysis->refresh();
 
         // Return unified response structure
         return response()->json([
@@ -80,6 +86,7 @@ class GapAnalysisController extends Controller
             'data' => array_merge([
                 'job_title' => $jobDescription->title,
                 'resume_title' => $resume->title,
+                'ai_failure' => AiFailure::details($analysis, 'roadmap_status'),
             ], $analysis->toArray())
         ], $analysis->wasRecentlyCreated ? 201 : 200);
     }

@@ -2,11 +2,11 @@
 
 namespace App\Services;
 
+use App\Exceptions\AiServiceException;
+use App\Models\GapAnalysis;
 use App\Models\Interview;
-use App\Models\GapAnalysis; // 👈 Import the model dependency cleanly
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Validator;
-use RuntimeException;
 
 class PythonInterviewService
 {
@@ -18,11 +18,6 @@ class PythonInterviewService
         // get the url from env
         $url = config('services.python_ai.interview_url');
 
-        // check url
-        if (!is_string($url) || !filter_var($url, FILTER_VALIDATE_URL)) {
-            throw new RuntimeException('Python AI interview endpoint configuration is missing or invalid.');
-        }
-
         // Fetch relationship text dependencies securely
         $resumeText = $interview->resume?->extracted_text;
         $jobDescriptionText = $interview->jobDescription?->description;
@@ -30,7 +25,7 @@ class PythonInterviewService
 
         // check if text fields are blank
         if (blank($resumeText) || blank($jobDescriptionText)) {
-            throw new RuntimeException('Missing required resume or job description content payload for AI analysis.');
+            throw new AiServiceException('missing_input');
         }
 
         // get gab analysis for job & resume
@@ -41,7 +36,7 @@ class PythonInterviewService
 
         // check if analysis doesn't exist
         if ($gapAnalysis === null) {
-            throw new RuntimeException('Cannot initialize interview: Missing baseline persistent Gap Analysis record.');
+            throw new AiServiceException('missing_input');
         }
 
         // Extract missing and matched skills from analysis
@@ -49,11 +44,13 @@ class PythonInterviewService
         $matchingSkills = $gapAnalysis->analysis['matching_skills'] ?? [];
 
         // prepare request headers
-        $request = Http::acceptJson()
-            ->connectTimeout(5)
-            ->timeout(45);
+        if (! is_string($url) || ! filter_var($url, FILTER_VALIDATE_URL)
+            || ! in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true)) {
+            throw new AiServiceException('service_configuration');
+        }
 
-        // use token if any
+        $request = Http::acceptJson()->connectTimeout(5)->timeout(max(1, min((int) config('services.python_ai.timeout', 45), 45)));
+
         if ($token = config('services.python_ai.token')) {
             $request = $request->withToken($token);
         }
@@ -65,25 +62,25 @@ class PythonInterviewService
             'job_title' => $jobTitle,
             'missing_skills' => $missingSkills,
             'matching_skills' => $matchingSkills,
-            'interview_id' => $interview->id
+            'interview_id' => $interview->id,
         ]);
 
         // check response status
-        if (!$response->successful()) {
-            throw new RuntimeException("Python interview service failed with HTTP code {$response->status()}.");
+        if (! $response->successful()) {
+            throw AiServiceException::fromResponse($response);
         }
 
         // get response as json
         $payload = $response->json();
 
-        if (!is_array($payload)) {
-            throw new RuntimeException('Python interview service returned an invalid or corrupt data structure.');
+        if (! is_array($payload)) {
+            throw new AiServiceException('invalid_response');
         }
 
         // make sure to trim question text
         $payload['questions'] = array_map(
-            fn($question) => is_string($question) ? trim($question) : $question,
-            $payload['questions'] ?? []
+            fn ($question) => is_string($question) ? trim($question) : $question,
+            is_array($payload['questions'] ?? null) ? $payload['questions'] : []
         );
 
         // Ensure the Python system returned an array of exactly 10 questions
@@ -96,10 +93,7 @@ class PythonInterviewService
         ]);
 
         if ($validator->fails()) {
-            throw new RuntimeException(
-                'Python AI service payload failed structural validation checks: '
-                    . json_encode($validator->errors()->toArray())
-            );
+            throw new AiServiceException('invalid_response');
         }
 
         return $validator->validated();

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ParsingStatus;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Attributes\Scope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\AsArrayObject;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['resume_id', 'job_description_id', 'match_percentage', 'roadmap_status', 'analysis', 'roadmap'])]
+#[Hidden(['ai_run', 'ai_error_code'])]
 class GapAnalysis extends Model
 {
     #[Scope]
@@ -23,6 +25,7 @@ class GapAnalysis extends Model
     protected function casts(): array
     {
         return [
+            'ai_run' => 'integer',
             'roadmap_status' => ParsingStatus::class,
             'analysis' => AsArrayObject::class,
             'roadmap' => AsArrayObject::class,

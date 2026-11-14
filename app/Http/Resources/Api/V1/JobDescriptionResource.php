@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Services\Ai\AiFailure;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,6 +17,7 @@ class JobDescriptionResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'ai_failure' => AiFailure::details($this->resource, 'parsing_status'),
             'title' => $this->title,
             'company_name' => $this->company_name,
             'parsing_status' => $this->parsing_status->value,

@@ -12,6 +12,7 @@ use OpenApi\Spec as OA;
             type: 'object',
             required: ['extracted_text', 'skills'],
             properties: [
+                'ai_failure' => new OA\Schema(ref: '#/components/schemas/AiFailure'),
                 'extracted_text' => new OA\Schema(type: 'string', nullable: true, description: 'May be null before processing completes.', example: 'Backend developer experienced in Laravel and MySQL.'),
                 'skills' => new OA\Schema(
                     type: 'array',
